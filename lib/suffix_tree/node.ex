@@ -1,4 +1,5 @@
 defmodule SuffixTree.Node do
+  alias __MODULE__
   @moduledoc false
 
   @enforce_keys [
@@ -12,21 +13,21 @@ defmodule SuffixTree.Node do
             children: [],
             link: nil
 
-  def root?(%{parent: parent}) do
+  def root?(%Node{parent: parent}) do
     !parent
   end
 
-  def leaf?(%{children: children}) do
+  def leaf?(%Node{children: children}) do
     Enum.empty?(children)
   end
 
-  def add_child(%{children: children} = parent, child) do
+  def add_child(%Node{children: children} = parent, child) do
     child = %{child | parent: parent}
     parent = %{children: [child | children]}
     {:ok, parent}
   end
 
-  def remove_child(%{children: children} = parent, label) do
+  def remove_child(%Node{children: children} = parent, label) do
     child = get_child(children, label)
     children = List.delete(children, child)
     parent = %{parent | children: children}
