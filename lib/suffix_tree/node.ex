@@ -8,18 +8,20 @@ defmodule SuffixTree.Node do
   @moduledoc false
 
   @enforce_keys [
-    # the string of interest (index will be in a sorted list)
-    # you will need to update the index field in each struct with its index when you sort, or use unique ids/hashes and sort by hash during build
-    :index,
-    # use a range for label to be applied to the string of interest
-    :label,
+    # a single Node
     :parent,
+    # If the strings are very long and unique, the string used as label could be replaced with label length, and then determined by working backwards from the upper end of the range in matches[0].
+    :label,
+    # A sorted list of tuples, in the form {hash, [ranges]}, where each listed range is of a length that equals the sum of all labels from root to the current Node.
+    :matches,
+    # a list of Nodes
     :children,
+    # a single Node
     :link
   ]
-  defstruct index: nil,
+  defstruct parent: nil,
             label: nil,
-            parent: nil,
+            matches: [],
             children: [],
             link: nil
 
@@ -33,28 +35,32 @@ defmodule SuffixTree.Node do
 
   def add_child(%Node{children: children} = parent, child) do
     child = %{child | parent: parent}
-    parent = %{children: [child | children]}
+    new_children = [child | children]
+    parent = %{parent | children: new_children}
     {:ok, parent}
   end
 
-  def remove_child(%Node{children: children} = parent, label) do
-    child = get_child(children, label)
+  # rework functions from here down
+  def remove_child(%Node{children: children} = parent, child) do
     children = List.delete(children, child)
     parent = %{parent | children: children}
     {:ok, parent}
   end
 
-  def get_child(children, label) do
-    Enum.find(children, fn child -> get_label(child) == label end)
+  def get_child(children, hash) do
+    Enum.find(children, fn child -> child == hash end)
   end
 
-  def get_label(%Node{index: index, label: label}) do
-    # look up the label by index
-    # take the range given by label
+  def get_string(hash) do
+    # look up the string by hash
   end
 
   def split_edge(node, new_node) do
     # ...
+  end
+
+  def skip_count(label) do
+    # skips down the tree until we exhaust the label
   end
 
   def match(tree, substring) do
@@ -67,7 +73,12 @@ defmodule SuffixTree.Node do
     # if the substring is longer than the edge, compare only the last character of the edge to the character at length(edge) position in the substring
     # if the last character of the edge matches the nth character of the substring, begin your next comparison from the n + 1th character of the substring and repeat from the first character match above
     # when you reach a point where the substring is out of characters, or you reach a point where the nth character of the substring fails to match any branch off the node in question, then simply return all leaves
+    # this needs work - you need to either point from each leaf to the parent string in the tree, or in a separate indexed list
     # no match:
     # return an empty list
+  end
+
+  def murmur(string) do
+    Murmur.hash_x86_128(string)
   end
 end
