@@ -77,8 +77,4 @@ defmodule SuffixTree.Node do
     # no match:
     # return an empty list
   end
-
-  def murmur(string) do
-    Murmur.hash_x86_128(string)
-  end
 end
