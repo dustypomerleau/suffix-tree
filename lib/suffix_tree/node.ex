@@ -13,13 +13,16 @@ defmodule SuffixTree.Node do
   #   :parent,
   #   # If the strings are very long and unique, the string used as label could be replaced with label length, and then determined by working backwards from the upper end of the range in matches[0].
   #   :label,
-  #   # A sorted list of tuples, in the form {hash, [ranges]}, where each listed range is of a length that equals the sum of all labels from root to the current Node.
+  #   # a sorted list of tuples, in the form {hash, [ranges], leaf}, where each listed range is of a length that equals the sum of all labels from root to the current Node
+  #   # obviously leaf? of `true` is only for the last range in the list
   #   :matches,
+  #   #
+  #   :leaves,
   #   # a list of Nodes
   #   :children,
   #   # a single Node
   #   :link
-  # ]
+  ]
 
   defstruct parent: nil,
             label: nil,
