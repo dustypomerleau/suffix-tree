@@ -17,6 +17,7 @@ defmodule SuffixTree do
     Murmur.hash_x86_128(string)
   end
 
+  # probably separate out SuffixTree.Build and SuffixTree.Match
   def match(tree, substring) do
     # compare the first character of substring to the available child edge first chars of root (only one will match)
     # match:
@@ -42,5 +43,11 @@ defmodule SuffixTree do
 
   def skip_count(label) do
     # skips down the tree until we exhaust the label
+  end
+
+  def remove_node(node) do
+    # remove the node
+    # removing a string from the tree may be as simple as finding every use of that hash and deleting it, and then in a case where that leaves matches empty, delete the node
+    # don't forget to check for root though, because matches there will be empty and we don't want to delete that
   end
 end
