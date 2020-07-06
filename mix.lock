@@ -1,3 +1,5 @@
 %{
+  "crypto_rand": {:hex, :crypto_rand, "1.0.2", "e1381d3fbe743cfb6082150f4f95dc7ac3fcaf5b53dae0fc96f7e0f006d91dd1", [:mix], [], "hexpm", "ca0eebc811c4496446c4d32e18e3888d7cf8fb1f441af015578f3523b1e35be8"},
   "murmur": {:hex, :murmur, "1.0.1", "a6e6bced2dd0d666090a9cf3e73699f3b9176bbcf32d35b0f022f137667608e3", [:mix], [], "hexpm", "1303e80b1a5514a8afe0baf4241903ae31e3ba8b7e9e7c2219a668c065a691a6"},
+  "puid": {:hex, :puid, "1.1.1", "e1155e141fe21141dba74a840b0a6b01336f972f08e9ce8fa489ffcd48ba9fa6", [:mix], [{:crypto_rand, "~> 1.0", [hex: :crypto_rand, repo: "hexpm", optional: false]}], "hexpm", "fc271ee494abf54b9cb896b30648c49f2f6e8112cf4990b7e3a92ca871be3338"},
 }
