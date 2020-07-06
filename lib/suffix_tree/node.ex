@@ -3,49 +3,70 @@
 # structs
 # ukkonen2
 
+# import, alias, use
+
 defmodule SuffixTree.Node do
-  alias __MODULE__
   @moduledoc false
 
-  # # enforcing keys means they can't be nil, consider whether any should be enforced at all
-  # @enforce_keys [
-  #   # a single Node
-  #   :parent,
-  #   # If the strings are very long and unique, the string used as label could be replaced with label length, and then determined by working backwards from the upper end of the range in matches[0].
-  #   :label,
-  #   # a sorted list of tuples, in the form {hash, [ranges], leaf}, where each listed range is of a length that equals the sum of all labels from root to the current Node
-  #   # obviously leaf? of `true` is only for the last range in the list
-  #   :matches,
-  #   #
-  #   :leaves,
-  #   # a list of Nodes
-  #   :children,
-  #   # a single Node
-  #   :link
-  ]
+  alias __MODULE__
+  # import SuffixTree, only: [hash: 1]
+  use Puid
 
-  defstruct parent: nil,
+  @enforce_keys [:id, :children]
+
+  defstruct id: nil,
+            parent: nil,
             label: nil,
-            matches: [],
+            leaves: [],
             children: [],
             link: nil
 
-  def root?(%Node{parent: parent}) do
+  @type t :: %Node{
+          id: String.t(),
+          parent: Node.t(),
+          label: String.t(),
+          leaves: [{String.t(), integer}],
+          children: [Node.t()],
+          link: Node.t()
+        }
+
+  def new_node() do
+    %Node{
+      id: generate(),
+      parent: nil,
+      label: nil,
+      leaves: [],
+      children: [],
+      link: nil
+    }
+  end
+
+  def root?(%{parent: parent}) do
     !parent
   end
 
-  def leaf?(%Node{children: children}) do
+  # only applies to leaf nodes, not those listed in the leaves field
+  def leaf?(%{children: children}) do
     Enum.empty?(children)
   end
 
-  def add_child(%Node{children: children} = parent, child) do
+  def add_child(%{children: children} = parent, child) do
     child = %{child | parent: parent}
-    children = [child | children] |> Enum.sort()
+    children = [child | children] |> Enum.sort(Node)
     parent = %{parent | children: children}
     {:ok, parent}
   end
 
-  def remove_child(%Node{children: children} = parent, child) do
+  # `compare/2 is used by `Enum.sort(list, Node)`
+  def compare(%{label: label1} = _node1, %{label: label2} = _node2) do
+    case {label1, label2} do
+      {label1, label2} when label1 > label2 -> :gt
+      {label1, label2} when label1 < label2 -> :lt
+      _ -> :eq
+    end
+  end
+
+  def remove_child(%{children: children} = parent, child) do
     children = List.delete(children, child)
     parent = %{parent | children: children}
     {:ok, parent}
