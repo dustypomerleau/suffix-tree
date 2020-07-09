@@ -9,7 +9,6 @@ defmodule SuffixTree.Node do
   @moduledoc false
 
   alias __MODULE__
-  # import SuffixTree, only: [hash: 1]
   use Puid
 
   @enforce_keys [:id, :children]
@@ -24,8 +23,8 @@ defmodule SuffixTree.Node do
   @type t :: %Node{
           id: String.t(),
           parent: Node.t(),
-          label: String.t(),
-          leaves: [{String.t(), integer}],
+          label: {String.t(), Range.t()},
+          leaves: [{String.t(), integer()}],
           children: [Node.t()],
           link: Node.t()
         }
@@ -51,10 +50,13 @@ defmodule SuffixTree.Node do
   end
 
   def add_child(%{children: children} = parent, child) do
-    child = %{child | parent: parent}
+    {:ok, child} = add_parent(parent, child)
     children = [child | children] |> Enum.sort(Node)
-    parent = %{parent | children: children}
-    {:ok, parent}
+    {:ok, %{parent | children: children}}
+  end
+
+  def add_parent(parent, child) do
+    {:ok, %{child | parent: parent}}
   end
 
   # `compare/2 is used by `Enum.sort(list, Node)`
@@ -68,8 +70,7 @@ defmodule SuffixTree.Node do
 
   def remove_child(%{children: children} = parent, child) do
     children = List.delete(children, child)
-    parent = %{parent | children: children}
-    {:ok, parent}
+    {:ok, %{parent | children: children}}
   end
 
   def get_child(children, hash) do
