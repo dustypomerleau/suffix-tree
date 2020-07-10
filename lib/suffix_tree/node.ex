@@ -9,16 +9,7 @@ defmodule SuffixTree.Node do
   alias __MODULE__
   use Puid
 
-  @enforce_keys [:id, :children]
-
-  defstruct id: nil,
-            parent: nil,
-            label: nil,
-            leaves: [],
-            children: [],
-            link: nil
-
-  @type t :: %Node{
+  @type t :: %__MODULE__{
           id: String.t(),
           # parent.id
           parent: String.t(),
@@ -32,8 +23,17 @@ defmodule SuffixTree.Node do
           link: String.t()
         }
 
+  @enforce_keys [:id, :children]
+  defstruct id: nil,
+            parent: nil,
+            label: nil,
+            leaves: [],
+            children: [],
+            link: nil
+
+  # should we enforce the parent field and take parent as an arg here?
   def new_node() do
-    %Node{
+    %__MODULE__{
       id: generate(),
       parent: nil,
       label: nil,

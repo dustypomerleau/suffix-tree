@@ -1,20 +1,46 @@
+# The tree is implied via 2 data structures:
+# 1. %{hash => string} AKA `strings`
+# 2. %{id => node} AKA `nodes`
+# you could include both of these maps inside a SuffixTree struct... hmm
+
 defmodule SuffixTree do
   @moduledoc false
 
+  @type t :: %__MODULE__{
+          nodes: %{String.t() => Node.t()},
+          strings: %{String.t() => String.t()}
+        }
+
+  @enforce_keys [:nodes, :strings]
+  defstruct nodes: %{}, strings: %{}
+
+  def new_tree(), do: %__MODULE__{nodes: %{}, strings: %{}} end
+
   @doc """
-  Takes a list of strings and returns a suffix tree for those strings, as well as a map that allows each string to be looked up by hash. Non-cryptographic hashes are used to store possible matches for each node in the tree without repeatedly storing very long strings.
+  Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings. Random `id`s are used to store parent and children nodes in the nodes map. Non-cryptographic hashes are used to store node labels and leaves in the tree without repeatedly storing very long strings.
   """
-  def build_tree(strings) do
+  def build_tree(string_list) do
+    # build_strings(string_list)
     # build a suffix tree from a list of strings
-    # {:ok, tree, lookup}
+    # {:ok, tree}
   end
 
-  def build_lookup(strings) do
-    Enum.into(strings, %{}, fn string -> {hash(string), string} end)
+  def build_strings(string_list) do
+    strings = Enum.into(
+                string_list,
+                %{},
+                fn string -> {hash(string), string} end
+              )
+    {:ok, strings}
   end
 
   def hash(string) do
     Murmur.hash_x86_128(string)
+  end
+
+  def add_string(tree, string) do
+    # add the string to the tree
+    # {:ok, tree}
   end
 
   # probably separate out SuffixTree.Build and SuffixTree.Match
@@ -31,6 +57,7 @@ defmodule SuffixTree do
     # this needs work - you need to either point from each leaf to the parent string in the tree, or in a separate indexed list
     # no match:
     # return an empty list
+    # {:ok, matches}
   end
 
   def get_string(hash) do
