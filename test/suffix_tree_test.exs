@@ -27,6 +27,6 @@ defmodule SuffixTreeTest do
 
   test "murmur returns a hash" do
     hash = murmur("a sample string") |> to_string()
-    assert Regex.match?(~r/\d{36,40}/, hash)
+    assert Regex.match?(~r/\d{38,39}/, hash)
   end
 end
