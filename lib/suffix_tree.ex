@@ -6,58 +6,86 @@
 defmodule SuffixTree do
   @moduledoc false
 
+  use Puid
+
   @type t :: %__MODULE__{
+          id: String.t(),
           nodes: %{String.t() => Node.t()},
           strings: %{String.t() => String.t()}
         }
 
-  @enforce_keys [:nodes, :strings]
-  defstruct nodes: %{}, strings: %{}
-
-  def new_tree(), do: %__MODULE__{nodes: %{}, strings: %{}} end
+  @enforce_keys [:id, :nodes, :strings]
+  defstruct id: nil, nodes: %{}, strings: %{}
 
   @doc """
-  Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings. Random `id`s are used to store parent and children nodes in the nodes map. Non-cryptographic hashes are used to store node labels and leaves in the tree without repeatedly storing very long strings.
+  Creates an empty SuffixTree struct that can be passed to `build_implicit/1` as the first step to building a suffix tree. `new_tree/1` is the usual form, and takes the strings you would like to include in the tree as a map in the form `%{hash => string}`.
   """
-  def build_tree(string_list) do
-    # build_strings(string_list)
-    # build a suffix tree from a list of strings
-    # {:ok, tree}
+  @spec new_tree(none() | %{String.t() => String.t()} :: __MODULE__.t()
+  def new_tree() do
+    %__MODULE__{id: generate(), nodes: %{}, strings: %{}}
   end
 
+  def new_tree(strings) do
+    %__MODULE__{id: generate(), nodes: %{}, strings: strings}
+  end
+
+  @doc """
+  Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings. Each node has a Puid-generated `id` that can be referenced to store parent and child relationships in the nodes map. Non-cryptographic hashes are used to store node labels and tree leaves without repeatedly storing very long strings.
+  """
+  @spec build_tree([String.t()]) :: {:ok, SuffixTree.t()}
+  def build_tree(string_list) do
+    {:ok, strings} = build_strings(string_list)
+    tree = new_tree(strings)
+    {:ok, implicit_tree} = build_implicit(tree)
+    {:ok, tree} = build_explicit(implicit_tree)
+  end
+
+  @doc """
+  Takes a list of strings and returns a map in the form:
+
+  ```elixir
+  %{Murmur3F_hash_output => hashed_input_string}
+  ```
+
+  This function is used as a callback during `build_tree/1`. The returned `strings` map is used as a lookup table during construction of the `nodes` map.
+  """
+  @spec build_strings([String.t()]) :: {:ok, %{String.t() => String.t()}}
   def build_strings(string_list) do
-    strings = Enum.into(
-                string_list,
-                %{},
-                fn string -> {hash(string), string} end
-              )
+    strings =
+      Enum.into(
+        string_list,
+        %{},
+        fn string -> {hash(string), string} end
+      )
+
     {:ok, strings}
+  end
+
+  @spec build_implicit(__MODULE__.t()) :: {:ok, __MODULE__.t()}
+  def build_implicit(tree) do
+    tree =
+      Enum.each(
+        tree.strings,
+        fn {hash, string} -> add_string(tree, hash, string) end
+      )
+
+    {:ok, tree}
+  end
+
+  @spec build_explicit(__MODULE__.t()) :: {:ok, __MODULE__.t()}
+  def build_explicit(tree) do
+    # build the explicit suffix tree
+    # use an atom for a terminal character, but don't actually store it in the tree
+    {:ok, tree}
   end
 
   def hash(string) do
     Murmur.hash_x86_128(string)
   end
 
-  def add_string(tree, string) do
+  def add_string(tree, hash, string) do
     # add the string to the tree
     # {:ok, tree}
-  end
-
-  # probably separate out SuffixTree.Build and SuffixTree.Match
-  def match(tree, substring) do
-    # compare the first character of substring to the available child edge first chars of root (only one will match)
-    # match:
-    # compare the length of the substring to the edge that matches
-    # if the substring is shorter than the edge, compare each character
-    # if the characters match, return all leaves from that branch of the tree
-    # if the characters don't match, return an empty list
-    # if the substring is longer than the edge, compare only the last character of the edge to the character at length(edge) position in the substring
-    # if the last character of the edge matches the nth character of the substring, begin your next comparison from the n + 1th character of the substring and repeat from the first character match above
-    # when you reach a point where the substring is out of characters, or you reach a point where the nth character of the substring fails to match any branch off the node in question, then simply return all leaves
-    # this needs work - you need to either point from each leaf to the parent string in the tree, or in a separate indexed list
-    # no match:
-    # return an empty list
-    # {:ok, matches}
   end
 
   def get_string(hash) do
