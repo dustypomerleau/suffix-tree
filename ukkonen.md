@@ -6,7 +6,7 @@
 4. If the current node has a suffix link, follow it, and add (_i + 1_) to the label on _s(v)_.
 5. If the current node does not have a suffix link, go up one level to its parent (or the root).
 6. If the parent node has a suffix link, follow it, walk _gamma_ down from _s(v)_, and add (_i + 1_) according to the rules.
-7. If you create a new node while adding (_i + 1_), add the suffix link _v -> s(v)_ before moving on.
+7. If the last extension created a node while adding (_i + 1_), then this extension will also create one, so add the suffix link _v -> s(v)_ before moving on.
 8. Repeat for _j = 1..i + 1_.
 9. Start a new phase at the new _j1_ node you created during step 3.
 10. When you complete phase _m_, perform a special extension, ensuring that a leaf exists for every location where `:last` would be placed. This extension is unique, because `:last` is not actually added to the tree, but the algorithm is performed as if were planning to add this unique final character.
