@@ -9,6 +9,7 @@
 7. If you create a new node while adding (_i + 1_), add the suffix link _v -> s(v)_ before moving on.
 8. Repeat for _j = 1..i + 1_.
 9. Start a new phase at the new _j1_ node you created during step 3.
+10. When you complete phase _m_, perform a special extension, ensuring that a leaf exists for every location where `:last` would be placed. This extension is unique, because `:last` is not actually added to the tree, but the algorithm is performed as if were planning to add this unique final character.
 
 ## Extension rules for adding character (_i + 1_)
 
