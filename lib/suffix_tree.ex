@@ -20,7 +20,7 @@ defmodule SuffixTree do
   @doc """
   Creates an empty SuffixTree struct that can be passed to `build_implicit/1` as the first step to building a suffix tree. `new_tree/1` is the usual form, and takes the strings you would like to include in the tree as a map in the form `%{hash => string}`.
   """
-  @spec new_tree(none() | %{String.t() => String.t()} :: __MODULE__.t()
+  @spec new_tree(none() | %{String.t() => String.t()}) :: __MODULE__.t()
   def new_tree() do
     %__MODULE__{id: generate(), nodes: %{}, strings: %{}}
   end
@@ -47,16 +47,11 @@ defmodule SuffixTree do
   %{Murmur3F_hash_output => hashed_input_string}
   ```
 
-  This function is used as a callback during `build_tree/1`. The returned `strings` map is used as a lookup table during construction of the `nodes` map.
+  The returned map is used as a lookup table by `build_tree/1`, during construction of the `nodes` map.
   """
   @spec build_strings([String.t()]) :: {:ok, %{String.t() => String.t()}}
   def build_strings(string_list) do
-    strings =
-      Enum.into(
-        string_list,
-        %{},
-        fn string -> {hash(string), string} end
-      )
+    strings = Enum.into(string_list, %{}, fn string -> {hash(string), string} end)
 
     {:ok, strings}
   end
@@ -74,18 +69,29 @@ defmodule SuffixTree do
 
   @spec build_explicit(__MODULE__.t()) :: {:ok, __MODULE__.t()}
   def build_explicit(tree) do
-    # build the explicit suffix tree
-    # use an atom for a terminal character, but don't actually store it in the tree
-    {:ok, tree}
+    {:ok, add_string(tree, :last)}
   end
 
   def hash(string) do
     Murmur.hash_x86_128(string)
   end
 
+  # NOTE: you don't need to add any leaves for a given string until :last
+  def add_string(tree, :last) do
+    # special case
+    {:ok, tree}
+  end
+
+  # TODO: this enum won't actually store to the variable
   def add_string(tree, hash, string) do
-    # add the string to the tree
-    # {:ok, tree}
+    # graphemes = String.graphemes(string)
+    # tree = Enum.each(graphemes, fn grapheme -> extend(tree, string, grapheme) end)
+    # tree = extend(tree, hash, string, :last)
+    {:ok, tree}
+  end
+
+  def extend(grapheme) do
+    # extend the suffix tree by grapheme
   end
 
   def get_string(hash) do
