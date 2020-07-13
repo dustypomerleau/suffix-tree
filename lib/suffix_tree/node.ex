@@ -43,6 +43,17 @@ defmodule SuffixTree.Node do
     }
   end
 
+  def new_root() do
+    %__MODULE__{
+      id: "root",
+      parent: nil,
+      label: nil,
+      leaves: [],
+      children: [],
+      link: nil
+    }
+  end
+
   def root?(%{parent: parent}) do
     !parent
   end

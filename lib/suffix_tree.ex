@@ -6,7 +6,7 @@
 defmodule SuffixTree do
   @moduledoc false
 
-  use Puid
+  import SuffixTree.Node
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -22,11 +22,15 @@ defmodule SuffixTree do
   """
   @spec new_tree(none() | %{String.t() => String.t()}) :: __MODULE__.t()
   def new_tree() do
-    %__MODULE__{id: generate(), nodes: %{}, strings: %{}}
+    %__MODULE__{id: generate(), nodes: %{"root" => new_root()}, strings: %{}}
   end
 
   def new_tree(strings) do
-    %__MODULE__{id: generate(), nodes: %{}, strings: strings}
+    %__MODULE__{
+      id: generate(),
+      nodes: %{"root" => new_root()},
+      strings: strings
+    }
   end
 
   @doc """
