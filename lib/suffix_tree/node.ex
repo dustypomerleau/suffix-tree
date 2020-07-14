@@ -9,7 +9,7 @@ defmodule SuffixTree.Node do
   alias __MODULE__
   use Puid
 
-  @type t :: %__MODULE__{
+  @type t :: %Node{
           id: String.t(),
           # parent.id
           parent: String.t(),
@@ -32,37 +32,29 @@ defmodule SuffixTree.Node do
             link: nil
 
   # should we enforce the parent field and take parent as an arg here?
-  def new_node() do
-    %__MODULE__{
-      id: generate(),
-      parent: nil,
-      label: nil,
-      leaves: [],
-      children: [],
-      link: nil
-    }
+  @spec new_node(String.t(), [String.t()]) :: Node.t()
+  def new_node(parent \\ nil, children \\ []) do
+    %Node{id: generate(), parent: parent, children: children}
   end
 
+  @spec new_root() :: Node.t()
   def new_root() do
-    %__MODULE__{
-      id: "root",
-      parent: nil,
-      label: nil,
-      leaves: [],
-      children: [],
-      link: nil
-    }
+    %Node{id: "root", children: []}
   end
 
+  @spec root?(Node.t()) :: boolean()
   def root?(%{parent: parent}) do
     !parent
   end
 
   # only applies to leaf nodes, not those listed in the leaves field
+  @spec leaf?(Node.t()) :: boolean()
   def leaf?(%{children: children}) do
     Enum.empty?(children)
   end
 
+  @spec add_child(Node.t(), Node.t()) ::
+          {:ok, Node.t(), Node.t()}
   def add_child(
         %{id: parent_id, children: children} = parent,
         %{id: child_id} = child
@@ -73,10 +65,12 @@ defmodule SuffixTree.Node do
     {:ok, parent, child}
   end
 
+  @spec add_parent(String.t(), Node.t()) :: {:ok, Node.t()}
   def add_parent(parent_id, child) do
     {:ok, %{child | parent: parent_id}}
   end
 
+  @spec remove_child(Node.t(), String.t()) :: {:ok, Node.t()}
   def remove_child(%{children: children} = parent, child_id) do
     children = List.delete(children, child_id)
     {:ok, %{parent | children: children}}
