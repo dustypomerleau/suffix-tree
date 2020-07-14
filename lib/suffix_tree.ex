@@ -41,7 +41,7 @@ defmodule SuffixTree do
     {:ok, strings} = build_strings(string_list)
     tree = new_tree(strings)
     {:ok, implicit_tree} = build_implicit(tree)
-    {:ok, tree} = build_explicit(implicit_tree)
+    {:ok, build_explicit(implicit_tree)}
   end
 
   @doc """
