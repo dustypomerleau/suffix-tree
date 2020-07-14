@@ -55,7 +55,12 @@ defmodule SuffixTree do
   """
   @spec build_strings([String.t()]) :: {:ok, %{String.t() => String.t()}}
   def build_strings(string_list) do
-    strings = Enum.into(string_list, %{}, fn string -> {hash(string), string} end)
+    strings =
+      Enum.into(
+        string_list,
+        %{},
+        fn string -> {hash(string), string} end
+      )
 
     {:ok, strings}
   end
