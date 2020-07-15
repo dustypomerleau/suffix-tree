@@ -13,7 +13,7 @@ defmodule SuffixTree do
   defstruct id: nil, nodes: %{}, strings: %{}
 
   @doc """
-  Creates an empty SuffixTree struct that can be passed to `build_implicit/1` as the first step to building a suffix tree. `new_tree/1` is the usual form, and takes the strings you would like to include in the tree as a map in the form `%{hash => string}`.
+  Takes a map of strings in the form `%{hash => string}`, and returns a nodeless suffix tree that can be passed to `build_implicit/1` as the first step to building a suffix tree.
   """
   @spec new_tree(%{String.t() => String.t()}) :: SuffixTree.t()
   def new_tree(strings \\ %{}) do
