@@ -1,8 +1,3 @@
-# The tree is implied via 2 data structures:
-# 1. %{hash => string} AKA `strings`
-# 2. %{id => node} AKA `nodes`
-# you could include both of these maps inside a SuffixTree struct... hmm
-
 defmodule SuffixTree do
   @moduledoc false
 
@@ -20,12 +15,8 @@ defmodule SuffixTree do
   @doc """
   Creates an empty SuffixTree struct that can be passed to `build_implicit/1` as the first step to building a suffix tree. `new_tree/1` is the usual form, and takes the strings you would like to include in the tree as a map in the form `%{hash => string}`.
   """
-  @spec new_tree(none() | %{String.t() => String.t()}) :: SuffixTree.t()
-  def new_tree() do
-    %SuffixTree{id: generate(), nodes: %{"root" => new_root()}, strings: %{}}
-  end
-
-  def new_tree(strings) do
+  @spec new_tree(%{String.t() => String.t()}) :: SuffixTree.t()
+  def new_tree(strings \\ %{}) do
     %SuffixTree{
       id: generate(),
       nodes: %{"root" => new_root()},
