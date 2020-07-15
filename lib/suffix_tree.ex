@@ -6,7 +6,7 @@ defmodule SuffixTree do
   @type t :: %SuffixTree{
           id: String.t(),
           nodes: %{String.t() => Node.t()},
-          strings: %{String.t() => String.t()}
+          strings: %{integer() => String.t()}
         }
 
   @enforce_keys [:id, :nodes, :strings]
@@ -39,12 +39,12 @@ defmodule SuffixTree do
   Takes a list of strings and returns a map in the form:
 
   ```elixir
-  %{Murmur3F_hash_output => hashed_input_string}
+  %{Murmur3F_hash => string}
   ```
 
   The returned map is used as a lookup table by `build_tree/1`, during construction of the `nodes` map.
   """
-  @spec build_strings([String.t()]) :: {:ok, %{String.t() => String.t()}}
+  @spec build_strings([String.t()]) :: {:ok, %{integer() => String.t()}}
   def build_strings(string_list) do
     strings =
       Enum.into(
