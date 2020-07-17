@@ -15,8 +15,8 @@ defmodule SuffixTree.Node do
           parent: String.t(),
           # {hash, range}
           label: {integer(), Range.t()},
-          # {hash, start_index}
-          leaves: [{integer(), integer()}],
+          # %{hash => start_index}
+          leaves: %{integer() => integer()},
           # [child.id]
           children: [String.t()],
           # node.id
