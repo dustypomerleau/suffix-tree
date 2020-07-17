@@ -56,38 +56,43 @@ defmodule SuffixTree do
     {:ok, strings}
   end
 
+  @doc """
+  Builds an implicit suffix tree by iterating through its `strings` map and adding appropriate nodes to the `nodes` map. Returns the implicit tree, which can be transformed into an explicit tree by `build_explicit/1`.
+  """
   @spec build_implicit(SuffixTree.t()) :: {:ok, SuffixTree.t()}
-  def build_implicit(tree) do
-    tree =
-      Enum.each(
-        tree.strings,
-        fn {hash, string} -> add_string(tree, hash, string) end
+  def build_implicit(%{nodes: nodes, strings: strings} = tree) do
+    nodes =
+      Enum.reduce(
+        strings,
+        nodes,
+        fn {hash, string}, nodes -> add_string(nodes, strings, hash, string) end
       )
 
+    tree = %{tree | nodes: nodes}
     {:ok, tree}
   end
 
+  # it may be that you need to add :last as part of every string addition, in which case build explicit doesn't really need to exist, but add string would need to have an add grapheme or codepoint for the normal ones, followed by one for add :last. So every string addition would then return an explicit tree. In that case you may be able to refactor build_implicIt and build_explicit into a single build_tree above.
   @spec build_explicit(SuffixTree.t()) :: {:ok, SuffixTree.t()}
-  def build_explicit(tree) do
-    {:ok, add_string(tree, :last)}
+  def build_explicit(%{nodes: nodes, strings: strings} = tree) do
+    nodes = add_string(nodes, strings, :last)
+    tree = %{tree | nodes: nodes}
+    {:ok, tree}
   end
 
   def hash(string) do
     Murmur.hash_x86_128(string)
   end
 
-  # NOTE: you don't need to add any leaves for a given string until :last
-  def add_string(tree, :last) do
+  # so i think the answer is to move the addition of last inside add_string and call it after add grapheme or whatever you end up calling it.
+  def add_string(nodes, strings, :last) do
     # special case
-    {:ok, tree}
+    {:ok, nodes}
   end
 
-  # TODO: this enum won't actually store to the variable
-  def add_string(tree, hash, string) do
-    # graphemes = String.graphemes(string)
-    # tree = Enum.each(graphemes, fn grapheme -> extend(tree, string, grapheme) end)
-    # tree = extend(tree, hash, string, :last)
-    {:ok, tree}
+  def add_string(nodes, strings, hash, string) do
+    # add the string to the tree
+    {:ok, nodes}
   end
 
   def extend(grapheme) do
