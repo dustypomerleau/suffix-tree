@@ -58,13 +58,48 @@ defmodule SuffixTree do
     )
   end
 
-  def add_string(%{nodes: nodes, strings: strings} = tree, hash, string) do
-    # add each grapheme in the string to the tree, then call the special extend with :last
-    tree
+  @spec add_string(
+          SuffixTree.t(),
+          String.t(),
+          integer(),
+          String.t()
+        ) :: SuffixTree.t()
+  def add_string(tree, jm1_node \\ "root", hash, string)
+
+  def add_string(tree, jm1_node, hash, <<>>) do
+    extend(tree, jm1_node, hash, :last)
   end
 
-  def extend(grapheme) do
-    # extend the suffix tree by grapheme
+  def add_string(
+        tree,
+        jm1_node,
+        hash,
+        <<grapheme::utf8, rest::binary>> = string
+      ) do
+    {tree, jm1_node} = extend(tree, jm1_node, hash, grapheme)
+    add_string(tree, jm1_node, hash, rest)
+
+    # when this loop finishes, this function will return the tree because extend/4(..., :last) (and therefore add_string/4(..., :last)) returns only the tree
+  end
+
+  @spec extend(
+          SuffixTree.t(),
+          String.t(),
+          integer(),
+          String.t()
+        ) :: {SuffixTree.t(), String.t()}
+  def extend(tree, jm1_node \\ "root", hash, grapheme)
+
+  def extend(tree, jm1_node, hash, :last) do
+    # faux extend the suffix tree by :last
+    # in order to convert the implicit tree to an explicit one
+    # this should return the tree only, which should result in add_string returning only the tree, as it's called last.
+    # However this needs to be clarified, because perhaps we need to return the same type from each clause?
+  end
+
+  def extend(tree, jm1_node, hash, grapheme) do
+    # add the grapheme and return the new tree and new jm1
+    {tree, jm1_node}
   end
 
   def get_string(hash) do
