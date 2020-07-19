@@ -110,10 +110,20 @@ defmodule SuffixTree do
     # skips down the tree until we exhaust the label
   end
 
-  def remove_node(node) do
+  def remove_node(tree, node) do
     # remove the node
-    # removing a string from the tree may be as simple as finding every use of that hash and deleting it, and then in a case where that leaves matches empty, delete the node
-    # don't forget to check for root though, because matches there will be empty and we don't want to delete that
+    tree
+  end
+
+  def remove_string(tree, string) do
+    # removing a string from the tree may be as simple as
+    # * iterate through each node
+    # * delete the hash from leaves
+    # * check for the hash on label
+    # * if the hash is present on label, use another hash in leaves to create a new label
+    # * if no other hash is present in leaves, you need to prepend the node's label to the children of the node (checking and adjusting ranges) and adjust the parent of the children to the node's parent before deleting it
+    # * delete the string from `strings`
+    tree
   end
 
   def hash(string) do
