@@ -66,11 +66,8 @@ defmodule SuffixTree do
     )
   end
 
-  @spec add_string(
-          SuffixTree.t(),
-          none() | String.t(),
-          String.t()
-        ) :: SuffixTree.t()
+  @spec add_string(SuffixTree.t(), String.t()) :: SuffixTree.t()
+  @spec add_string(SuffixTree.t(), String.t(), String.t()) :: SuffixTree.t()
 
   def add_string(tree, string) do
     add_string(tree, hash(string), string)
@@ -86,13 +83,14 @@ defmodule SuffixTree do
   end
 
   @spec extend(SuffixTree.t(), integer(), :last) :: SuffixTree.t()
+  @spec extend(SuffixTree.t(), integer(), String.t()) :: SuffixTree.t()
+
   def extend(tree, hash, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
     tree
   end
 
-  @spec extend(SuffixTree.t(), integer(), String.t()) :: SuffixTree.t()
   def extend(tree, hash, grapheme) do
     # add the grapheme and return the new tree
     tree
