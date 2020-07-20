@@ -21,7 +21,7 @@ defmodule SuffixTree.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:dialyxir, "~>1.0"},
+      {:dialyxir, "~>1.0", only: [:dev], runtime: false},
       {:murmur, "~> 1.0"},
       {:puid, "~> 1.0"}
     ]
