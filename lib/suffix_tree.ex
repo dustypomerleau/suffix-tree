@@ -23,7 +23,34 @@ defmodule SuffixTree do
   """
   @spec build_tree([String.t()]) :: SuffixTree.t()
   def build_tree(string_list) do
-    string_list |> build_strings() |> new_tree() |> build_nodes()
+    string_list |> new_tree() |> build_nodes()
+  end
+
+  @doc """
+  Takes a list of strings, or a map of strings in the form `%{hash => string}`, and returns a nodeless suffix tree that can be passed to `build_nodes/1` to generate a true suffix tree.
+  """
+  @spec new_tree([String.t()]) :: SuffixTree.t()
+  @spec new_tree(%{String.t() => String.t()}) :: SuffixTree.t()
+  def new_tree(strings \\ %{})
+
+  def new_tree(strings) when is_list(strings) do
+    %SuffixTree{
+      id: generate(),
+      nodes: %{"root" => new_root()},
+      strings: build_strings(strings),
+      extension: 0,
+      last_explicit: "root"
+    }
+  end
+
+  def new_tree(strings) when is_map(strings) do
+    %SuffixTree{
+      id: generate(),
+      nodes: %{"root" => new_root()},
+      strings: strings,
+      extension: 0,
+      last_explicit: "root"
+    }
   end
 
   @doc """
@@ -38,20 +65,6 @@ defmodule SuffixTree do
   @spec build_strings([String.t()]) :: %{integer() => String.t()}
   def build_strings(string_list) do
     Enum.into(string_list, %{}, fn string -> {hash(string), string} end)
-  end
-
-  @doc """
-  Takes a map of strings in the form `%{hash => string}`, and returns a nodeless suffix tree that can be passed to `build_nodes/1` to generate a true suffix tree.
-  """
-  @spec new_tree(%{String.t() => String.t()}) :: SuffixTree.t()
-  def new_tree(strings \\ %{}) do
-    %SuffixTree{
-      id: generate(),
-      nodes: %{"root" => new_root()},
-      strings: strings,
-      extension: 0,
-      last_explicit: "root"
-    }
   end
 
   @doc """
@@ -92,8 +105,29 @@ defmodule SuffixTree do
   end
 
   def extend(tree, hash, grapheme) do
-    # add the grapheme and return the new tree
-    tree
+    node = tree.nodes[tree.last_explicit]
+    label = get_label(tree, node)
+    last = String.at(label, -1)
+
+    case last do
+      ^grapheme ->
+        tree
+
+      _ ->
+        nil
+        # add to the label, tweak relationships and follow the link, then repeat
+        # return the tree
+    end
+  end
+
+  @doc """
+  Takes a tree and a node, and returns the label on the node.
+  """
+  @spec get_label(SuffixTree.t(), Node.t()) :: String.t()
+  def get_label(tree, node) do
+    {hash, range} = node.label
+    label = tree.strings[hash] |> String.slice(range)
+    label
   end
 
   def get_string(hash) do
