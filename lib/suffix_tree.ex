@@ -8,7 +8,7 @@ defmodule SuffixTree do
           nodes: %{String.t() => Node.t()},
           strings: %{integer() => String.t()},
           extension: integer(),
-          last_explicit: String.t()
+          last_explicit: {String.t(), integer()}
         }
 
   @enforce_keys [:id, :nodes, :strings, :extension, :last_explicit]
@@ -16,7 +16,7 @@ defmodule SuffixTree do
             nodes: %{},
             strings: %{},
             extension: 0,
-            last_explicit: "root"
+            last_explicit: {"root", 0}
 
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
@@ -31,25 +31,17 @@ defmodule SuffixTree do
   """
   @spec new_tree([String.t()]) :: SuffixTree.t()
   @spec new_tree(%{String.t() => String.t()}) :: SuffixTree.t()
-  def new_tree(strings \\ %{})
-
-  def new_tree(strings) when is_list(strings) do
+  def new_tree(strings \\ %{}) do
     %SuffixTree{
       id: generate(),
       nodes: %{"root" => new_root()},
-      strings: build_strings(strings),
+      strings:
+        cond do
+          is_list(strings) -> build_strings(strings)
+          is_map(strings) -> strings
+        end,
       extension: 0,
-      last_explicit: "root"
-    }
-  end
-
-  def new_tree(strings) when is_map(strings) do
-    %SuffixTree{
-      id: generate(),
-      nodes: %{"root" => new_root()},
-      strings: strings,
-      extension: 0,
-      last_explicit: "root"
+      last_explicit: {"root", 0}
     }
   end
 
@@ -104,24 +96,89 @@ defmodule SuffixTree do
     tree
   end
 
+  # ok here is the deal - you need a last explicit node and an index
+  # update the node whenever you
+  # 1. create a new node
+  # 2. jump to a child of last explicit to find your match (this works from root also)
+  # update the index whenever you
+  # 1. first add a grapheme (even if implicitly) - if the addition is implicit, it will be a show stopper anyway, so you are just incrementing the position on the label for your next comparison
+  # you can determine if you are first adding a grapheme by whether extension is 0
+  # the corollary to that is that you have to increment extension
   def extend(
         %{nodes: nodes, last_explicit: last_explicit} = tree,
         hash,
         grapheme
       ) do
     node = nodes[last_explicit]
+    # perhaps move below case
+    %{id: id, children: children} = node
     label = get_label(tree, node)
     last = String.at(label, -1)
 
-    case last do
-      ^grapheme ->
-        tree
+    node =
+      case last do
+        # last character of "" is nil, but last character of nil throws, so perhaps default to empty string when there is no label
+        nil ->
+          match_child(node, grapheme)
 
-      _ ->
-        nil
-        # add to the label, tweak relationships and follow the link, increment j, etc. then repeat
-        # return the tree
-    end
+        # return the matching child node if present
+        ^grapheme ->
+          node
+
+        # if the grapheme is already last on the node's label
+        # return the node unchanged
+        _ ->
+          nil
+      end
+
+    # address a possible nil node
+    # because either there are no children or no matches
+    # if you create a new node, then add the suffix link to last_explicit before setting the new node to last_explicit
+
+    #   "root" ->
+    #     [node] =
+    #       Enum.filter(
+    #         children,
+    #         fn child -> (get_label(tree, child) |> String.at(0)) == grapheme end
+    #       )
+    #   case node
+    # end
+
+    # case {last, %{id: id, children: children} = node} do
+    #   {_grapheme, "root"} ->
+    #     [node] =
+    #       Enum.filter(
+    #         children,
+    #         fn child -> first = get_label(tree, child) |> String.at(0) end
+    #         case first do
+    #           ^grapheme ->
+
+    #         end
+    #         )
+
+    # handle root case
+    # enum through children
+    # look for grapheme as the first character of label
+    # if you find it, set last_explicit to that node's id
+    # if you don't find it
+    # create a new child node
+    # list it as child on root
+    # list root as its parent
+    # add grapheme to the label in the form {hash, range}
+    # set last_explicit to the new node's id
+    # return the tree
+    # {^grapheme, id} ->
+    # tree
+
+    # _ ->
+    # nil
+    # add to the label, tweak relationships and follow the link, increment j, etc. then repeat
+    # return the tree
+    # end
+  end
+
+  def match_child(node, grapheme) do
+    # send back the child node whose label first char matches grapheme (or nil)
   end
 
   @doc """
