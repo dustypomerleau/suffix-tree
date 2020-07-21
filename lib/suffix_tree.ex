@@ -104,8 +104,12 @@ defmodule SuffixTree do
     tree
   end
 
-  def extend(tree, hash, grapheme) do
-    node = tree.nodes[tree.last_explicit]
+  def extend(
+        %{nodes: nodes, last_explicit: last_explicit} = tree,
+        hash,
+        grapheme
+      ) do
+    node = nodes[last_explicit]
     label = get_label(tree, node)
     last = String.at(label, -1)
 
@@ -115,7 +119,7 @@ defmodule SuffixTree do
 
       _ ->
         nil
-        # add to the label, tweak relationships and follow the link, then repeat
+        # add to the label, tweak relationships and follow the link, increment j, etc. then repeat
         # return the tree
     end
   end
