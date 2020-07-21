@@ -109,7 +109,8 @@ defmodule SuffixTree do
         hash,
         grapheme
       ) do
-    node = nodes[last_explicit]
+    {last_node, last_index} = last_explicit
+    node = nodes[last_node]
     # perhaps move below case
     %{id: id, children: children} = node
     label = get_label(tree, node)
