@@ -7,16 +7,15 @@ defmodule SuffixTree do
           id: String.t(),
           nodes: %{String.t() => Node.t()},
           strings: %{integer() => String.t()},
-          extension: integer(),
-          last_explicit: {String.t(), integer()}
+          # {le_node, l_index, extension_j}
+          extension: {String.t(), integer(), integer()}
         }
 
-  @enforce_keys [:id, :nodes, :strings, :extension, :last_explicit]
+  @enforce_keys [:id, :nodes, :strings, :extension]
   defstruct id: nil,
             nodes: %{},
             strings: %{},
-            extension: 0,
-            last_explicit: {"root", 0}
+            extension: {"root", 0, 0}
 
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
@@ -40,8 +39,7 @@ defmodule SuffixTree do
           is_list(strings) -> build_strings(strings)
           is_map(strings) -> strings
         end,
-      extension: 0,
-      last_explicit: {"root", 0}
+      extension: {"root", 0, 0}
     }
   end
 
@@ -73,7 +71,6 @@ defmodule SuffixTree do
 
   @spec add_string(SuffixTree.t(), String.t()) :: SuffixTree.t()
   @spec add_string(SuffixTree.t(), String.t(), String.t()) :: SuffixTree.t()
-
   def add_string(tree, string) do
     add_string(tree, hash(string), string)
   end
@@ -82,14 +79,13 @@ defmodule SuffixTree do
     extend(tree, hash, :last)
   end
 
-  def add_string(tree, hash, <<grapheme::utf8, rest::binary>> = _string) do
+  def add_string(tree, hash, <<grapheme::utf8, rest::binary>>) do
     tree = extend(tree, hash, grapheme)
     add_string(tree, hash, rest)
   end
 
   @spec extend(SuffixTree.t(), integer(), :last) :: SuffixTree.t()
   @spec extend(SuffixTree.t(), integer(), String.t()) :: SuffixTree.t()
-
   def extend(tree, hash, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
@@ -112,9 +108,11 @@ defmodule SuffixTree do
     {last_node, last_index} = last_explicit
     node = nodes[last_node]
     # perhaps move below case
-    %{id: id, children: children} = node
+    # %{id: id, children: children} = node
     label = get_label(tree, node)
     last = String.at(label, -1)
+
+    # you need to address this - you don't want the last character in the label, you want the character at last_index + 1
 
     node =
       case last do
