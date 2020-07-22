@@ -16,10 +16,7 @@ defmodule SuffixTree do
         }
 
   @enforce_keys [:id, :nodes, :strings, :extension]
-  defstruct id: nil,
-            nodes: %{},
-            strings: %{},
-            extension: {"root", 0, 0}
+  defstruct [:id, :nodes, :strings, :extension]
 
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
