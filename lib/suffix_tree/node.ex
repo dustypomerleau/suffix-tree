@@ -23,7 +23,7 @@ defmodule SuffixTree.Node do
   @enforce_keys [:id, :children]
   defstruct id: nil,
             parent: nil,
-            label: nil,
+            label: "",
             leaves: [],
             children: [],
             link: nil
