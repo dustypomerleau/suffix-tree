@@ -9,18 +9,15 @@ defmodule SuffixTree.Node do
   alias __MODULE__
   use Puid
 
+  @type id :: String.t()
+
   @type t :: %Node{
-          id: String.t(),
-          # parent.id
-          parent: String.t(),
-          # {hash, range}
-          label: {integer(), Range.t()},
-          # %{hash => start_index}
-          leaves: %{integer() => integer()},
-          # [child.id]
-          children: [String.t()],
-          # node.id
-          link: String.t()
+          id: Node.id(),
+          parent: SuffixTree.id(),
+          label: {SuffixTree.hash(), Range.t()},
+          leaves: %{SuffixTree.hash() => integer()},
+          children: [SuffixTree.id()],
+          link: SuffixTree.id()
         }
 
   @enforce_keys [:id, :children]
@@ -32,7 +29,7 @@ defmodule SuffixTree.Node do
             link: nil
 
   # should we enforce the parent field and take parent as an arg here?
-  @spec new_node(String.t(), [String.t()]) :: Node.t()
+  @spec new_node(SuffixTree.id(), [SuffixTree.id()]) :: Node.t()
   def new_node(parent \\ nil, children \\ []) do
     %Node{id: generate(), parent: parent, children: children}
   end
@@ -65,12 +62,12 @@ defmodule SuffixTree.Node do
     {:ok, parent, child}
   end
 
-  @spec add_parent(String.t(), Node.t()) :: {:ok, Node.t()}
+  @spec add_parent(SuffixTree.id(), Node.t()) :: {:ok, Node.t()}
   def add_parent(parent_id, child) do
     {:ok, %{child | parent: parent_id}}
   end
 
-  @spec remove_child(Node.t(), String.t()) :: {:ok, Node.t()}
+  @spec remove_child(Node.t(), SuffixTree.id()) :: {:ok, Node.t()}
   def remove_child(%{children: children} = parent, child_id) do
     children = List.delete(children, child_id)
     {:ok, %{parent | children: children}}

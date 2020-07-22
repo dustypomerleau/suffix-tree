@@ -3,12 +3,16 @@ defmodule SuffixTree do
 
   import SuffixTree.Node
 
+  @type extension :: integer()
+  @type hash :: integer()
+  @type id :: String.t()
+  @type index :: integer()
+
   @type t :: %SuffixTree{
-          id: String.t(),
-          nodes: %{String.t() => Node.t()},
-          strings: %{integer() => String.t()},
-          # {le_node, l_index, extension_j}
-          extension: {String.t(), integer(), integer()}
+          id: SuffixTree.id(),
+          nodes: %{Node.id() => Node.t()},
+          strings: %{hash() => String.t()},
+          extension: {Node.id(), index(), extension()}
         }
 
   @enforce_keys [:id, :nodes, :strings, :extension]
@@ -29,7 +33,7 @@ defmodule SuffixTree do
   Takes a list of strings, or a map of strings in the form `%{hash => string}`, and returns a nodeless suffix tree that can be passed to `build_nodes/1` to generate a true suffix tree.
   """
   @spec new_tree([String.t()]) :: SuffixTree.t()
-  @spec new_tree(%{String.t() => String.t()}) :: SuffixTree.t()
+  @spec new_tree(%{hash() => String.t()}) :: SuffixTree.t()
   def new_tree(strings \\ %{}) do
     %SuffixTree{
       id: generate(),
@@ -52,7 +56,7 @@ defmodule SuffixTree do
 
   The returned map is used as a lookup table during construction and use of the suffix tree, allowing `{hash, index/range}` representations of labels and leaves on each node.
   """
-  @spec build_strings([String.t()]) :: %{integer() => String.t()}
+  @spec build_strings([String.t()]) :: %{hash() => String.t()}
   def build_strings(string_list) do
     Enum.into(string_list, %{}, fn string -> {hash(string), string} end)
   end
@@ -70,7 +74,7 @@ defmodule SuffixTree do
   end
 
   @spec add_string(SuffixTree.t(), String.t()) :: SuffixTree.t()
-  @spec add_string(SuffixTree.t(), String.t(), String.t()) :: SuffixTree.t()
+  @spec add_string(SuffixTree.t(), hash(), String.t()) :: SuffixTree.t()
   def add_string(tree, string) do
     add_string(tree, hash(string), string)
   end
@@ -84,8 +88,8 @@ defmodule SuffixTree do
     add_string(tree, hash, rest)
   end
 
-  @spec extend(SuffixTree.t(), integer(), :last) :: SuffixTree.t()
-  @spec extend(SuffixTree.t(), integer(), String.t()) :: SuffixTree.t()
+  @spec extend(SuffixTree.t(), hash(), :last) :: SuffixTree.t()
+  @spec extend(SuffixTree.t(), hash(), String.t()) :: SuffixTree.t()
   def extend(tree, hash, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
