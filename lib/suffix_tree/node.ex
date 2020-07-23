@@ -1,21 +1,18 @@
-# you need functionality from
-# suffixtree
-# structs
-# ukkonen2
-
 defmodule SuffixTree.Node do
   @moduledoc false
 
   alias __MODULE__
   use Puid
 
+  @type hash :: integer()
   @type id :: String.t()
+  @type index :: integer()
 
   @type t :: %Node{
           id: Node.id(),
           parent: SuffixTree.id(),
-          label: {SuffixTree.hash(), Range.t()},
-          leaves: %{SuffixTree.hash() => integer()},
+          label: {hash(), Range.t()},
+          leaves: %{hash() => index()},
           children: [SuffixTree.id()],
           link: SuffixTree.id()
         }

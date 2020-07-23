@@ -12,11 +12,14 @@ defmodule SuffixTree do
           id: SuffixTree.id(),
           nodes: %{Node.id() => Node.t()},
           strings: %{hash() => String.t()},
-          extension: {Node.id(), index(), extension()}
+          current: {Node.id(), index()},
+          explicit: {Node.id(), index()},
+          extension: integer()
+          # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
 
-  @enforce_keys [:id, :nodes, :strings, :extension]
-  defstruct [:id, :nodes, :strings, :extension]
+  @enforce_keys [:id, :nodes, :strings]
+  defstruct [:id, :nodes, :strings, :current, :explicit, :extension]
 
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
@@ -40,7 +43,9 @@ defmodule SuffixTree do
           is_list(strings) -> build_strings(strings)
           is_map(strings) -> strings
         end,
-      extension: {"root", 0, 0}
+      current: "root",
+      explicit: nil,
+      extension: 0
     }
   end
 
@@ -93,14 +98,33 @@ defmodule SuffixTree do
     tree
   end
 
-  # ok here is the deal - you need a last explicit node and an index
-  # update the node whenever you
-  # 1. create a new node
-  # 2. jump to a child of last explicit to find your match (this works from root also)
-  # update the index whenever you
-  # 1. first add a grapheme (even if implicitly) - if the addition is implicit, it will be a show stopper anyway, so you are just incrementing the position on the label for your next comparison
-  # you can determine if you are first adding a grapheme by whether extension is 0
-  # the corollary to that is that you have to increment extension
+  @doc """
+  fakedoc
+
+  update explicit whenever you
+  1. create a new node
+  1. jump to a child of last explicit to find your match (this works from root also)
+  update the index whenever you
+  1. first add a grapheme (even if implicitly) - if the addition is implicit, it will be a show stopper anyway, so you are just incrementing the position on the label for your next comparison
+  you can determine if you are first adding a grapheme by whether extension is 0
+  the corollary to that is that you have to increment extension
+
+  each call to extend is a phase
+  which means that you need to recursively call extend while updating the state params on the tree - including incrementing extension from 0..m over the course of adding a particular grapheme
+
+  for a given string, start by checking children of the root for the first grapheme as the first character of their label
+  if there is a match, make that the current node, increment the index, increment the extension, and return the tree
+  if there is no match, create a node, make its parent "root", add the grapheme to the label, add it to children on the root, set the new node to current_node and last_new
+  add the new root node and the newly created node back into the tree
+  increment the label index on the current node and the extension
+  (probably the current node should be a tuple of {current node id, label index} and you update both at once)
+  return the tree
+
+  move to checking the next grapheme
+  start at the current node, check the new index on the label and compare
+  if there is a match, increment the index and the extension and return the tree.
+  if there is no match
+  """
   def extend(
         %{nodes: nodes, last_explicit: last_explicit} = tree,
         hash,
