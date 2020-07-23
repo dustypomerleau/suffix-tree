@@ -3,7 +3,6 @@ defmodule SuffixTree do
 
   import SuffixTree.Node
 
-  @type extension :: integer()
   @type hash :: integer()
   @type id :: String.t()
   @type index :: integer()
@@ -14,7 +13,7 @@ defmodule SuffixTree do
           strings: %{hash() => String.t()},
           current: {Node.id(), index()},
           explicit: {Node.id(), index()},
-          extension: integer()
+          extension: index()
           # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
 
