@@ -47,27 +47,26 @@ defmodule SuffixTree.Node do
     Enum.empty?(children)
   end
 
-  @spec add_child(Node.t(), Node.t()) ::
-          {:ok, Node.t(), Node.t()}
+  @spec add_child(Node.t(), Node.t()) :: {Node.t(), Node.t()}
   def add_child(
         %{id: parent_id, children: children} = parent,
         %{id: child_id} = child
       ) do
-    {:ok, child} = add_parent(parent_id, child)
+    child = add_parent(parent_id, child)
     children = [child_id | children] |> Enum.sort()
     parent = %{parent | children: children}
-    {:ok, parent, child}
+    {parent, child}
   end
 
-  @spec add_parent(SuffixTree.id(), Node.t()) :: {:ok, Node.t()}
+  @spec add_parent(SuffixTree.id(), Node.t()) :: Node.t()
   def add_parent(parent_id, child) do
-    {:ok, %{child | parent: parent_id}}
+    %{child | parent: parent_id}
   end
 
-  @spec remove_child(Node.t(), SuffixTree.id()) :: {:ok, Node.t()}
+  @spec remove_child(Node.t(), SuffixTree.id()) :: Node.t()
   def remove_child(%{children: children} = parent, child_id) do
     children = List.delete(children, child_id)
-    {:ok, %{parent | children: children}}
+    %{parent | children: children}
   end
 
   # # perhaps rewrite this if needed
