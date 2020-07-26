@@ -27,8 +27,8 @@ defmodule SuffixTree.Node do
 
   # should we enforce the parent field and take parent as an arg here?
   @spec new_node(SuffixTree.id(), [SuffixTree.id()]) :: Node.t()
-  def new_node(parent \\ nil, children \\ []) do
-    %Node{id: generate(), parent: parent, children: children}
+  def new_node(parent_id \\ nil, children \\ []) do
+    %Node{id: generate(), parent: parent_id, children: children}
   end
 
   @spec new_root() :: Node.t()
