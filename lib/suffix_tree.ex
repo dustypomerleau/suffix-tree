@@ -84,9 +84,21 @@ defmodule SuffixTree do
     extend(tree, hash, :last)
   end
 
-  def add_string(tree, hash, <<grapheme::utf8, rest::binary>>) do
-    tree = extend(tree, hash, grapheme)
-    add_string(tree, hash, rest)
+  def add_string(
+        %{strings: strings} = tree,
+        hash,
+        <<grapheme::utf8, rest::binary>> = string
+      ) do
+    case strings[hash] do
+      nil ->
+        strings = %{strings | hash => string}
+        tree = %{tree | strings: strings}
+        add_string(tree, hash, string)
+
+      _ ->
+        tree = extend(tree, hash, grapheme)
+        add_string(tree, hash, rest)
+    end
   end
 
   @spec extend(SuffixTree.t(), hash(), :last) :: SuffixTree.t()
@@ -111,13 +123,15 @@ defmodule SuffixTree do
   each call to extend is a phase
   which means that you need to recursively call extend while updating the state params on the tree - including incrementing extension from 0..m over the course of adding a particular grapheme
 
-  for a given string, start by checking children of the root for the first grapheme as the first character of their label
-  if there is a match, make that the current node, increment the index, increment the extension, and return the tree
-  if there is no match, create a node, make its parent "root", add the grapheme to the label, add it to children on the root, set the new node to current_node and last_new
-  add the new root node and the newly created node back into the tree
-  increment the label index on the current node and the extension
-  (probably the current node should be a tuple of {current node id, label index} and you update both at once)
-  return the tree
+  ---
+
+  for a given string, first confirm that the string is present in the strings map - if not, add it
+
+  start by checking children of the root for the first grapheme as the first character of their label
+
+  if there is a match, make that node current and explicit, increment the index, increment the extension, and return the tree
+
+  if there is no match, create a node, make its parent "root", add the grapheme to the label, add the node to root's children, set the new node to current and explicit, replace root and add the new node in nodes, add nodes and the mods to explicit/current to the tree, increment extension and return the tree
 
   move to checking the next grapheme
   start at the current node, check the new index on the label and compare
