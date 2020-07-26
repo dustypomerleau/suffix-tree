@@ -84,6 +84,7 @@ defmodule SuffixTree do
     extend(tree, hash, :last)
   end
 
+  # this is inefficient because you only need to check if the string is in strings on the first grapheme, but here you do it on every grapheme - refactor
   def add_string(
         %{strings: strings} = tree,
         hash,
@@ -134,39 +135,81 @@ defmodule SuffixTree do
   if there is no match, create a node, make its parent "root", add the grapheme to the label, add the node to root's children, set the new node to current and explicit, replace root and add the new node in nodes, add nodes and the mods to explicit/current to the tree, increment extension and return the tree
 
   move to checking the next grapheme
-  start at the current node, check the new index on the label and compare
-  if there is a match, increment the index and the extension and return the tree.
+
+  start at current, check the current index on the label and compare to grapheme
+  if there is a match, increment the index and the extension and return the tree
+
   if there is no match
   """
   def extend(
-        %{nodes: nodes, last_explicit: last_explicit} = tree,
+        %{
+          nodes: nodes,
+          strings: strings,
+          current: {cur_node, cur_index},
+          explicit: {exp_node, exp_index},
+          extension: extension
+        } = tree,
         hash,
         grapheme
       ) do
-    {last_node, last_index} = last_explicit
-    node = nodes[last_node]
-    # perhaps move below case
-    # %{id: id, children: children} = node
-    label = get_label(tree, node)
-    last = String.at(label, -1)
+    case cur_node do
+      "root" ->
+        root = nodes["root"]
+        %{children: children} = root
 
-    # you need to address this - you don't want the last character in the label, you want the character at last_index + 1
+        matching_child = match_child(tree, children, grapheme)
 
-    node =
-      case last do
-        # last character of "" is nil, but last character of nil throws, so perhaps default to empty string when there is no label
-        nil ->
-          match_child(node, grapheme)
+        case matching_child do
+          nil ->
+            new_child = new_node("root", [])
+            {root, new_child} = add_child(root, new_child)
+            # rethink whether extension..extension is correct here
+            new_child = add_label(new_child, hash, extension..extension)
+            nodes = %{nodes | "root" => root, new_child.id => new_child}
 
-        # return the matching child node if present
-        ^grapheme ->
-          node
+            %{
+              tree
+              | nodes: nodes,
+                current: {new_child.id, 1},
+                explicit: {new_child.id, 1},
+                extension: extension + 1
+            }
 
-        # if the grapheme is already last on the node's label
-        # return the node unchanged
-        _ ->
-          nil
-      end
+          _ ->
+            tree = %{
+              tree
+              | current: {matching_child.id, 0},
+                explicit: {matching_child.id, 0},
+                extension: extension + 1
+            }
+
+            tree
+        end
+
+      _ ->
+        nil
+    end
+
+    # label = get_label(tree, node)
+    # last = String.at(label, -1)
+
+    # # you need to address this - you don't want the last character in the label, you want the character at last_index + 1
+
+    # node =
+    #   case last do
+    #     # last character of "" is nil, but last character of nil throws, so perhaps default to empty string when there is no label
+    #     nil ->
+    #       match_child(node, grapheme)
+
+    #     # return the matching child node if present
+    #     ^grapheme ->
+    #       node
+
+    #     # if the grapheme is already last on the node's label
+    #     # return the node unchanged
+    #     _ ->
+    #       nil
+    #   end
 
     # address a possible nil node
     # because either there are no children or no matches
@@ -214,22 +257,32 @@ defmodule SuffixTree do
     # end
   end
 
-  def match_child(node, grapheme) do
-    # send back the child node whose label first char matches grapheme (or nil)
+  @spec match_child(SuffixTree.t(), [Node.id()], String.t()) :: Node.id()
+  def match_child(%{nodes: nodes} = tree, children, grapheme) do
+    Enum.find(
+      children,
+      fn child_id ->
+        child = nodes[child_id]
+        child_match?(tree, child, grapheme)
+      end
+    )
+  end
+
+  @doc """
+  Returns a boolean, indicating whether the first grapheme in a node's label matches the given grapheme.
+  """
+  @spec child_match?(SuffixTree.t(), Node.t(), String.t()) :: boolean()
+  def child_match?(tree, node, grapheme) do
+    <<first::utf8, _rest::binary>> = get_label(tree, node)
+    first == grapheme
   end
 
   @doc """
   Takes a tree and a node, and returns the label on the node.
   """
   @spec get_label(SuffixTree.t(), Node.t()) :: String.t()
-  def get_label(tree, node) do
-    {hash, range} = node.label
-    label = tree.strings[hash] |> String.slice(range)
-    label
-  end
-
-  def get_string(hash) do
-    # look up the string by hash
+  def get_label(%{strings: strings} = _tree, %{label: {hash, range}} = _node) do
+    String.slice(strings[hash], range)
   end
 
   def split_edge(node, new_node) do
