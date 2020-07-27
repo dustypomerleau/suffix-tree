@@ -100,8 +100,10 @@ defmodule SuffixTree do
     root = nodes["root"]
     %{children: children} = root
 
+    # TODO: grapheme is a codepoint (type integer), not a string
     matching_child_id = match_child(tree, children, grapheme)
 
+    # should this logic be in `extend/3`?
     case matching_child_id do
       nil ->
         new_child = new_node("root", [])
@@ -196,7 +198,7 @@ defmodule SuffixTree do
     # extend by grapheme
   end
 
-  @spec match_child(SuffixTree.t(), [Node.id()], String.t()) :: Node.id()
+  @spec match_child(SuffixTree.t(), [Node.id()], integer()) :: Node.id()
   def match_child(%{nodes: nodes} = tree, children, grapheme) do
     Enum.find(
       children,
@@ -210,7 +212,7 @@ defmodule SuffixTree do
   @doc """
   Returns a boolean, indicating whether the first grapheme in a node's label matches the given grapheme.
   """
-  @spec child_match?(SuffixTree.t(), Node.t(), String.t()) :: boolean()
+  @spec child_match?(SuffixTree.t(), Node.t(), integer()) :: boolean()
   def child_match?(tree, node, grapheme) do
     <<first::utf8, _rest::binary>> = get_label(tree, node)
     first == grapheme
