@@ -25,7 +25,8 @@ defmodule SuffixTree do
   """
   @spec build_tree([String.t()]) :: SuffixTree.t()
   def build_tree(string_list) do
-    string_list |> new_tree() |> build_nodes()
+    tree = string_list |> new_tree() |> build_nodes()
+    tree
   end
 
   @doc """
@@ -147,6 +148,7 @@ defmodule SuffixTree do
   def extend(tree, hash, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
+    # must return the tree
     tree
   end
 
