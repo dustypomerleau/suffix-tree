@@ -12,7 +12,7 @@ defmodule SuffixTree do
           nodes: %{Node.id() => Node.t()},
           strings: %{hash() => String.t()},
           current: {Node.id(), index()},
-          explicit: {Node.id(), index()},
+          explicit: {Node.id() | nil, index()},
           extension: index()
           # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
@@ -43,8 +43,8 @@ defmodule SuffixTree do
           is_list(strings) -> build_strings(strings)
           is_map(strings) -> strings
         end,
-      current: "root",
-      explicit: nil,
+      current: {"root", 0},
+      explicit: {nil, 0},
       extension: 0
     }
   end
