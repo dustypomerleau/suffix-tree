@@ -25,8 +25,7 @@ defmodule SuffixTree do
   """
   @spec build_tree([String.t()]) :: SuffixTree.t()
   def build_tree(string_list) do
-    tree = string_list |> new_tree() |> build_nodes()
-    tree
+    string_list |> new_tree() |> build_nodes()
   end
 
   @doc """
