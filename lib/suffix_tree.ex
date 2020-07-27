@@ -108,8 +108,7 @@ defmodule SuffixTree do
         {root, new_child} = add_child(root, new_child)
         # rethink whether extension..extension is correct here
         new_child = %{new_child | label: {hash, extension..extension}}
-        nodes = Map.put(nodes, new_child.id, new_child)
-        nodes = %{nodes | "root" => root}
+        nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
 
         tree = %{
           tree
