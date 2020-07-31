@@ -1,6 +1,7 @@
 defmodule SuffixTree do
   @moduledoc false
 
+  alias SuffixTree.Node
   import SuffixTree.Node
 
   @type hash :: integer()
@@ -12,7 +13,7 @@ defmodule SuffixTree do
           nodes: %{Node.id() => Node.t()},
           strings: %{hash() => String.t()},
           current: {Node.id(), index()},
-          explicit: {Node.id() | nil, index()},
+          explicit: {Node.id(), index()},
           extension: index()
           # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
@@ -43,7 +44,7 @@ defmodule SuffixTree do
           is_map(strings) -> strings
         end,
       current: {"root", 0},
-      explicit: {nil, 0},
+      explicit: {"root", 0},
       extension: 0
     }
   end
@@ -99,8 +100,7 @@ defmodule SuffixTree do
     root = nodes["root"]
     %{children: children} = root
 
-    # TODO: grapheme is a codepoint (type integer), not a string
-    matching_child_id = match_child(tree, children, grapheme)
+    matching_child_id = match_child(tree, children, <<grapheme::utf8>>)
 
     # should this logic be in `extend/3`?
     case matching_child_id do
@@ -139,7 +139,7 @@ defmodule SuffixTree do
         hash,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
-    tree = extend(tree, hash, grapheme)
+    tree = extend(tree, hash, <<grapheme::utf8>>)
     add_string(tree, hash, rest)
   end
 
@@ -197,7 +197,7 @@ defmodule SuffixTree do
     # extend by grapheme
   end
 
-  @spec match_child(SuffixTree.t(), [Node.id()], integer()) :: Node.id()
+  @spec match_child(SuffixTree.t(), [Node.id()], String.t()) :: Node.id() | nil
   def match_child(%{nodes: nodes} = tree, children, grapheme) do
     Enum.find(
       children,
@@ -211,10 +211,10 @@ defmodule SuffixTree do
   @doc """
   Returns a boolean, indicating whether the first grapheme in a node's label matches the given grapheme.
   """
-  @spec child_match?(SuffixTree.t(), Node.t(), integer()) :: boolean()
+  @spec child_match?(SuffixTree.t(), Node.t(), String.t()) :: boolean()
   def child_match?(tree, node, grapheme) do
     <<first::utf8, _rest::binary>> = get_label(tree, node)
-    first == grapheme
+    <<first::utf8>> == grapheme
   end
 
   @doc """
