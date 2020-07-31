@@ -91,7 +91,8 @@ defmodule SuffixTree do
   def add_string(
         %{
           nodes: nodes,
-          current: {"root", _cur_index},
+          current: {"root", cur_index},
+          explicit: {_exp_node, exp_index},
           extension: extension
         } = tree,
         hash,
@@ -100,34 +101,32 @@ defmodule SuffixTree do
     root = nodes["root"]
     matching_child_id = match_child(tree, root, <<grapheme::utf8>>)
 
-    case matching_child_id do
-      nil ->
-        new_child = new_node("root", [])
-        {root, new_child} = add_child(root, new_child)
-        new_child = %{new_child | label: {hash, extension..extension}}
-        nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
+    tree =
+      case matching_child_id do
+        nil ->
+          new_child = new_node("root", [])
+          {root, new_child} = add_child(root, new_child)
+          new_child = %{new_child | label: {hash, extension..extension}}
+          nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
 
-        tree = %{
-          tree
-          | nodes: nodes,
-            current: {new_child.id, 1},
-            explicit: {new_child.id, 1}
-        }
+          %{
+            tree
+            | nodes: nodes,
+              current: {new_child.id, cur_index + 1},
+              explicit: {new_child.id, exp_index + 1},
+              extension: extension + 1
+          }
 
-        tree
+        # changing explicit: on an implicit match is unique to root
+        _child_id ->
+          %{
+            tree
+            | current: {matching_child_id, cur_index + 1},
+              explicit: {matching_child_id, exp_index + 1},
+              extension: extension + 1
+          }
+      end
 
-      _child_id ->
-        tree = %{
-          tree
-          | current: {matching_child_id, extension + 1},
-            # changing explicit on an implicit match is unique to root
-            explicit: {matching_child_id, extension + 1}
-        }
-
-        tree
-    end
-
-    tree = Map.put(tree, :extension, extension + 1)
     add_string(tree, hash, rest)
   end
 
