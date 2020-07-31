@@ -98,16 +98,12 @@ defmodule SuffixTree do
         <<grapheme::utf8, rest::binary>> = _string
       ) do
     root = nodes["root"]
-    %{children: children} = root
+    matching_child_id = match_child(tree, root, <<grapheme::utf8>>)
 
-    matching_child_id = match_child(tree, children, <<grapheme::utf8>>)
-
-    # should this logic be in `extend/3`?
     case matching_child_id do
       nil ->
         new_child = new_node("root", [])
         {root, new_child} = add_child(root, new_child)
-        # rethink whether extension..extension is correct here
         new_child = %{new_child | label: {hash, extension..extension}}
         nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
 
@@ -123,8 +119,9 @@ defmodule SuffixTree do
       _child_id ->
         tree = %{
           tree
-          | current: {matching_child_id, 1},
-            explicit: {matching_child_id, 1}
+          | current: {matching_child_id, extension + 1},
+            # changing explicit on an implicit match is unique to root
+            explicit: {matching_child_id, extension + 1}
         }
 
         tree
@@ -195,10 +192,15 @@ defmodule SuffixTree do
         grapheme
       ) do
     # extend by grapheme
+    tree
   end
 
-  @spec match_child(SuffixTree.t(), [Node.id()], String.t()) :: Node.id() | nil
-  def match_child(%{nodes: nodes} = tree, children, grapheme) do
+  @spec match_child(SuffixTree.t(), Node.t(), String.t()) :: Node.id() | nil
+  def match_child(
+        %{nodes: nodes} = tree,
+        %{children: children} = _node,
+        grapheme
+      ) do
     Enum.find(
       children,
       fn child_id ->
@@ -220,6 +222,8 @@ defmodule SuffixTree do
   @doc """
   Takes a tree and a node, and returns the label on the node.
   """
+  # TODO: this throws when you pass it a label of nil
+  # should we create a label on every new node, or handle the nil case?
   @spec get_label(SuffixTree.t(), Node.t()) :: String.t()
   def get_label(%{strings: strings} = _tree, %{label: {hash, range}} = _node) do
     String.slice(strings[hash], range)
