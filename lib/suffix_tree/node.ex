@@ -10,30 +10,24 @@ defmodule SuffixTree.Node do
 
   @type t :: %Node{
           id: Node.id(),
-          parent: SuffixTree.id(),
-          label: {hash(), Range.t()},
-          leaves: %{hash() => index()},
+          parent: SuffixTree.id() | nil,
+          label: {hash(), Range.t()} | nil,
+          leaves: %{hash() => index()} | nil,
           children: [SuffixTree.id()],
-          link: SuffixTree.id()
+          link: SuffixTree.id() | nil
         }
 
-  @enforce_keys [:id, :children]
-  defstruct id: nil,
-            parent: nil,
-            label: "",
-            leaves: [],
-            children: [],
-            link: nil
+  @enforce_keys [:id, :parent, :children]
+  defstruct [:id, :parent, :label, :leaves, :children, :link]
 
-  # should we enforce the parent field and take parent as an arg here?
   @spec new_node(SuffixTree.id(), [SuffixTree.id()]) :: Node.t()
-  def new_node(parent_id \\ nil, children \\ []) do
+  def new_node(parent_id, children \\ []) do
     %Node{id: generate(), parent: parent_id, children: children}
   end
 
   @spec new_root() :: Node.t()
   def new_root() do
-    %Node{id: "root", children: []}
+    %Node{id: "root", parent: nil, children: []}
   end
 
   @spec root?(Node.t()) :: boolean()
@@ -47,6 +41,7 @@ defmodule SuffixTree.Node do
     Enum.empty?(children)
   end
 
+  # adding parent may be unecessary here, as new_node/2 takes the parent as a param
   @spec add_child(Node.t(), Node.t()) :: {Node.t(), Node.t()}
   def add_child(
         %{id: parent_id, children: children} = parent,
@@ -67,6 +62,11 @@ defmodule SuffixTree.Node do
   def remove_child(%{children: children} = parent, child_id) do
     children = List.delete(children, child_id)
     %{parent | children: children}
+  end
+
+  @spec add_label(Node.t(), hash(), Range.t()) :: Node.t()
+  def add_label(node, hash, range) do
+    %{node | label: {hash, range}}
   end
 
   # # perhaps rewrite this if needed
