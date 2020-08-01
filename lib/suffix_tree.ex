@@ -104,9 +104,9 @@ defmodule SuffixTree do
     tree =
       case matching_child_id do
         nil ->
-          new_child = new_node("root", [])
+          new_child = new_node("root")
           {root, new_child} = add_child(root, new_child)
-          new_child = %{new_child | label: {hash, extension..extension}}
+          new_child = %{new_child | label: {hash, extension..-1}}
           nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
 
           %{
@@ -117,7 +117,7 @@ defmodule SuffixTree do
               extension: extension + 1
           }
 
-        # changing explicit: on an implicit match is unique to root
+        # changing exp_node on an implicit match is unique to extension 0
         _child_id ->
           %{
             tree
@@ -175,7 +175,7 @@ defmodule SuffixTree do
   move to checking the next grapheme
 
   start at current, check the current index on the label and compare to grapheme
-  if there is a match, increment the index and the extension and return the tree
+  if there is a match, increment the index for current, explicit, and the extension. set cur_node but not exp_node. return the tree
 
   if there is no match
   """
@@ -228,7 +228,15 @@ defmodule SuffixTree do
     String.slice(strings[hash], range)
   end
 
-  def split_edge(node, new_node) do
+  # the tree has the node whose label we'll split as cur_node
+  # cur_index is where the mismatch occurred
+  # first call new_node() and make the parent the same as cur_node
+  # on the parent, remove cur_node from children and add new node to children (sort)
+  # on cur_node, change parent to new node, and change label to start at cur_index
+  # on new node, add cur_node to children (sort) - parent is already set - and set the label to {hash, phase..phase}
+  # return the tree
+  @spec split_edge(SuffixTree.t(), hash(), String.t()) :: SuffixTree.t()
+  def split_edge(%{current: {cur_node, cur_index}} = tree, hash, grapheme) do
     # ...
   end
 
