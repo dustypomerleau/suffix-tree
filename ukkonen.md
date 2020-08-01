@@ -27,3 +27,16 @@ In our slightly modified approach to Ukkonen's algorithm, leaves are represented
 ## Skip count algorithm
 
 1. When walking down from s(v), if length(_&gamma;_) = _g_ is longer than length(label) = _g'_, skip to the next matching child node, set _g_ to (_g - g'_), _h_ to (_g' + 1_), and compare character _h_ of _&gamma;_. If it matches, repeat, until _g < g'_. Skip to character _g_ on the edge and quit.
+
+<!--
+incorporate this into above:
+
+# ok here is the deal - you need a last explicit node and an index
+  # update the node whenever you
+  # 1. create a new node
+  # 2. jump to a child of last explicit to find your match (this works from root also)
+  # update the index whenever you
+  # 1. first add a grapheme (even if implicitly) - if the addition is implicit, it will be a show stopper anyway, so you are just incrementing the position on the label for your next comparison
+# you can determine if you are first adding a grapheme by whether extension is 0
+  # the corollary to that is that you have to increment extension
+-->
