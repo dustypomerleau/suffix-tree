@@ -14,7 +14,7 @@ defmodule SuffixTree do
           strings: %{hash() => String.t()},
           current: {Node.id(), index()},
           explicit: {Node.id(), index()},
-          extension: index()
+          extension: {index(), index()}
           # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
 
@@ -45,7 +45,8 @@ defmodule SuffixTree do
         end,
       current: {"root", 0},
       explicit: {"root", 0},
-      extension: 0
+      # {phase, extension}
+      extension: {0, 0}
     }
   end
 
@@ -93,7 +94,7 @@ defmodule SuffixTree do
           nodes: nodes,
           current: {"root", cur_index},
           explicit: {_exp_node, exp_index},
-          extension: extension
+          extension: {phase, extension}
         } = tree,
         hash,
         <<grapheme::utf8, rest::binary>> = _string
@@ -114,7 +115,7 @@ defmodule SuffixTree do
             | nodes: nodes,
               current: {new_child.id, cur_index + 1},
               explicit: {new_child.id, exp_index + 1},
-              extension: extension + 1
+              extension: {phase, extension + 1}
           }
 
         # changing exp_node on an implicit match is unique to extension 0
@@ -123,7 +124,7 @@ defmodule SuffixTree do
             tree
             | current: {matching_child_id, cur_index + 1},
               explicit: {matching_child_id, exp_index + 1},
-              extension: extension + 1
+              extension: {phase, extension + 1}
           }
       end
 
@@ -179,6 +180,7 @@ defmodule SuffixTree do
 
   if there is no match
   """
+  # extend is complete when extension == phase
   def extend(
         %{
           nodes: nodes,
