@@ -41,7 +41,7 @@ defmodule SuffixTree.Node do
     Enum.empty?(children)
   end
 
-  # adding parent may be unecessary here, as new_node/2 takes the parent as a param
+  # adding parent is still necessary, because we may be changing existing nodes when we split a label
   @spec add_child(Node.t(), Node.t()) :: {Node.t(), Node.t()}
   def add_child(
         %{id: parent_id, children: children} = parent,
