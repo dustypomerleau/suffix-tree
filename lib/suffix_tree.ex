@@ -255,6 +255,7 @@ defmodule SuffixTree do
   @spec split_edge(st(), hash(), String.t()) :: st()
   def split_edge(%{current: {cur_node, cur_index}} = tree, hash, grapheme) do
     # ...
+    tree
   end
 
   def skip_count(label) do
