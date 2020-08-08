@@ -5,8 +5,8 @@ defmodule SuffixTree.Node do
   use Puid
 
   @type hash :: integer()
-  @type nid :: String.t()
   @type index :: integer()
+  @type nid :: String.t()
 
   @type n :: %Node{
           id: nid(),
