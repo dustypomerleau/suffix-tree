@@ -1,19 +1,20 @@
 defmodule SuffixTree do
   @moduledoc false
 
-  alias SuffixTree.Node
   import SuffixTree.Node
 
   @type hash :: integer()
-  @type id :: String.t()
   @type index :: integer()
+  @type n :: SuffixTree.Node.n()
+  @type nid :: SuffixTree.Node.nid()
+  @type stid :: String.t()
 
-  @type t :: %SuffixTree{
-          id: SuffixTree.id(),
-          nodes: %{Node.id() => Node.t()},
+  @type st :: %SuffixTree{
+          id: stid(),
+          nodes: %{nid() => n()},
           strings: %{hash() => String.t()},
-          current: {Node.id(), index()},
-          explicit: {Node.id(), index()},
+          current: {nid(), index()},
+          explicit: {nid(), index()},
           extension: {index(), index()}
           # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
@@ -24,7 +25,7 @@ defmodule SuffixTree do
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
   """
-  @spec build_tree([String.t()]) :: SuffixTree.t()
+  @spec build_tree([String.t()]) :: st()
   def build_tree(string_list) do
     string_list |> new_tree() |> build_nodes()
   end
@@ -32,8 +33,8 @@ defmodule SuffixTree do
   @doc """
   Takes a list of strings, or a map of strings in the form `%{hash => string}`, and returns a nodeless suffix tree that can be passed to `build_nodes/1` to generate a true suffix tree.
   """
-  @spec new_tree([String.t()]) :: SuffixTree.t()
-  @spec new_tree(%{hash() => String.t()}) :: SuffixTree.t()
+  @spec new_tree([String.t()]) :: st()
+  @spec new_tree(%{hash() => String.t()}) :: st()
   def new_tree(strings \\ %{}) do
     %SuffixTree{
       id: generate(),
@@ -45,7 +46,6 @@ defmodule SuffixTree do
         end,
       current: {"root", 0},
       explicit: {"root", 0},
-      # {phase, extension}
       extension: {0, 0}
     }
   end
@@ -67,7 +67,7 @@ defmodule SuffixTree do
   @doc """
   Takes a suffix tree and uses its `strings` map to build its `nodes` map. This is typically done with the nodeless tree returned by `new_tree/1`, but can also be done with an existing tree, where new strings have been added to its `strings` map, and corresponding nodes must be created. Returns an explicit suffix tree that is ready for use.
   """
-  @spec build_nodes(SuffixTree.t()) :: SuffixTree.t()
+  @spec build_nodes(st()) :: st()
   def build_nodes(%{strings: strings} = tree) do
     Enum.reduce(
       strings,
@@ -76,8 +76,8 @@ defmodule SuffixTree do
     )
   end
 
-  @spec add_string(SuffixTree.t(), String.t()) :: SuffixTree.t()
-  @spec add_string(SuffixTree.t(), hash(), String.t()) :: SuffixTree.t()
+  @spec add_string(st(), String.t()) :: st()
+  @spec add_string(st(), hash(), String.t()) :: st()
   def add_string(%{strings: strings} = tree, string) do
     hash = hash(string)
     strings = Map.put_new(strings, hash, string)
@@ -107,7 +107,7 @@ defmodule SuffixTree do
         nil ->
           new_child = new_node("root")
           {root, new_child} = add_child(root, new_child)
-          new_child = %{new_child | label: {hash, extension..-1}}
+          new_child = %{new_child | label: {hash, phase..-1}}
           nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
 
           %{
@@ -128,6 +128,20 @@ defmodule SuffixTree do
           }
       end
 
+    # split this out into update_phase or something
+    # NOTE:
+    # add_string should update phase before returning the tree
+    # extend should update extension before returning the tree
+    # extend :last should reset phase and extension before returning the tree
+    tree = %{
+      tree
+      | extension:
+          cond do
+            extension == phase -> {phase, extension + 1}
+            true -> {phase + 1, extension + 1}
+          end
+    }
+
     add_string(tree, hash, rest)
   end
 
@@ -140,8 +154,8 @@ defmodule SuffixTree do
     add_string(tree, hash, rest)
   end
 
-  @spec extend(SuffixTree.t(), hash(), :last) :: SuffixTree.t()
-  @spec extend(SuffixTree.t(), hash(), String.t()) :: SuffixTree.t()
+  @spec extend(st(), hash(), :last) :: st()
+  @spec extend(st(), hash(), String.t()) :: st()
   def extend(tree, hash, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
@@ -165,7 +179,7 @@ defmodule SuffixTree do
 
   ---
 
-  for a given string, first confirm that the string is present in the strings map - if not, add it
+  for a given string, first confirm that the string is present in the strings map - if not, add it - best way to do this is probably to privatize add_string/3 and expose only add_string/2
 
   start by checking children of the root for the first grapheme as the first character of their label
 
@@ -181,6 +195,7 @@ defmodule SuffixTree do
   if there is no match
   """
   # extend is complete when extension == phase
+  # leaves are determined by extension, labels are determined by phase
   def extend(
         %{
           nodes: nodes,
@@ -196,7 +211,7 @@ defmodule SuffixTree do
     tree
   end
 
-  @spec match_child(SuffixTree.t(), Node.t(), String.t()) :: Node.id() | nil
+  @spec match_child(st(), n(), String.t()) :: nid() | nil
   def match_child(
         %{nodes: nodes} = tree,
         %{children: children} = _node,
@@ -214,7 +229,7 @@ defmodule SuffixTree do
   @doc """
   Returns a boolean, indicating whether the first grapheme in a node's label matches the given grapheme.
   """
-  @spec child_match?(SuffixTree.t(), Node.t(), String.t()) :: boolean()
+  @spec child_match?(st(), n(), String.t()) :: boolean()
   def child_match?(tree, node, grapheme) do
     <<first::utf8, _rest::binary>> = get_label(tree, node)
     <<first::utf8>> == grapheme
@@ -225,7 +240,7 @@ defmodule SuffixTree do
   """
   # TODO: this throws when you pass it a label of nil
   # should we create a label on every new node, or handle the nil case?
-  @spec get_label(SuffixTree.t(), Node.t()) :: String.t()
+  @spec get_label(st(), n()) :: String.t()
   def get_label(%{strings: strings} = _tree, %{label: {hash, range}} = _node) do
     String.slice(strings[hash], range)
   end
@@ -237,7 +252,7 @@ defmodule SuffixTree do
   # on cur_node, change parent to new node, and change label to start at cur_index
   # on new node, add cur_node to children (sort) - parent is already set - and set the label to {hash, phase..phase}
   # return the tree
-  @spec split_edge(SuffixTree.t(), hash(), String.t()) :: SuffixTree.t()
+  @spec split_edge(st(), hash(), String.t()) :: st()
   def split_edge(%{current: {cur_node, cur_index}} = tree, hash, grapheme) do
     # ...
   end
