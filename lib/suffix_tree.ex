@@ -90,15 +90,15 @@ defmodule SuffixTree do
   end
 
   defp add_string(
-        %{
-          nodes: nodes,
-          current: {"root", cur_index},
-          explicit: {_exp_node, exp_index},
-          extension: {phase, extension}
-        } = tree,
-        hash,
-        <<grapheme::utf8, rest::binary>> = _string
-      ) do
+         %{
+           nodes: nodes,
+           current: {"root", cur_index},
+           explicit: {_exp_node, exp_index},
+           extension: {phase, _extension}
+         } = tree,
+         hash,
+         <<grapheme::utf8, rest::binary>> = _string
+       ) do
     root = nodes["root"]
     matching_child_id = match_child(tree, root, <<grapheme::utf8>>)
 
@@ -113,8 +113,7 @@ defmodule SuffixTree do
             tree
             | nodes: nodes,
               current: {new_child.id, cur_index + 1},
-              explicit: {new_child.id, exp_index + 1},
-              extension: {phase, extension + 1}
+              explicit: {new_child.id, exp_index + 1}
           }
 
         # changing exp_node on an implicit match is unique to extension 0
@@ -122,34 +121,26 @@ defmodule SuffixTree do
           %{
             tree
             | current: {matching_child_id, cur_index + 1},
-              explicit: {matching_child_id, exp_index + 1},
-              extension: {phase, extension + 1}
+              explicit: {matching_child_id, exp_index + 1}
           }
       end
 
-    # split this out into update_phase or something
     # NOTE:
-    # add_string should update phase before returning the tree
+    # add_string should increment phase and reset extension before returning the tree
     # extend should update extension before returning the tree
     # extend :last should reset phase and extension before returning the tree
-    tree = %{
-      tree
-      | extension:
-          cond do
-            extension == phase -> {phase, extension + 1}
-            true -> {phase + 1, extension + 1}
-          end
-    }
-
+    # TODO: you need to add leaves as well as label
+    tree = %{tree | extension: {phase + 1, 0}}
     add_string(tree, hash, rest)
   end
 
   defp add_string(
-        %{strings: strings} = tree,
-        hash,
-        <<grapheme::utf8, rest::binary>> = _string
-      ) do
+         %{extension: {phase, _extension}} = tree,
+         hash,
+         <<grapheme::utf8, rest::binary>> = _string
+       ) do
     tree = extend(tree, hash, <<grapheme::utf8>>)
+    tree = %{tree | extension: {phase + 1, 0}}
     add_string(tree, hash, rest)
   end
 
@@ -158,8 +149,8 @@ defmodule SuffixTree do
   def extend(tree, hash, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
-    # must return the tree
-    tree
+    # must return the tree and reset the extension in prep for the next string
+    %{tree | extension: {0, 0}}
   end
 
   @doc """
@@ -201,13 +192,14 @@ defmodule SuffixTree do
           strings: strings,
           current: {cur_node, cur_index},
           explicit: {exp_node, exp_index},
-          extension: extension
+          extension: {phase, extension}
         } = tree,
         hash,
         grapheme
       ) do
     # extend by grapheme
-    tree
+    tree = %{tree | extension: {phase, extension + 1}}
+    extend(tree, hash, grapheme)
   end
 
   @spec match_child(st(), n(), String.t()) :: nid() | nil
