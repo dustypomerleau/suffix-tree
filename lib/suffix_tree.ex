@@ -85,11 +85,11 @@ defmodule SuffixTree do
     add_string(tree, hash, string)
   end
 
-  def add_string(tree, hash, <<>>) do
+  defp add_string(tree, hash, <<>>) do
     extend(tree, hash, :last)
   end
 
-  def add_string(
+  defp add_string(
         %{
           nodes: nodes,
           current: {"root", cur_index},
@@ -145,7 +145,7 @@ defmodule SuffixTree do
     add_string(tree, hash, rest)
   end
 
-  def add_string(
+  defp add_string(
         %{strings: strings} = tree,
         hash,
         <<grapheme::utf8, rest::binary>> = _string
