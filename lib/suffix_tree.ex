@@ -106,8 +106,8 @@ defmodule SuffixTree do
       case matching_child_id do
         nil ->
           new_child = new_node("root")
-          {root, new_child} = add_child(root, new_child)
           new_child = %{new_child | label: {hash, phase..-1}}
+          {root, new_child} = add_child(root, new_child)
           nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
 
           %{
