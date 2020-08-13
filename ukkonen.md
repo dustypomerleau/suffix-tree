@@ -40,3 +40,24 @@ incorporate this into above:
 # you can determine if you are first adding a grapheme by whether extension is 0
   # the corollary to that is that you have to increment extension
 -->
+
+## Steps for adding a string to the tree
+
+1. First confirm that the string is present in the strings map. In practice, we do this by exposing `add_string/2`, which calls `Map.put_new/3`, and privatizing `add_string/3`, which will only be called after `%{hash => string}` is added to strings. TODO: handle collisions.
+
+1. Check for a child of root whose label begins with the first grapheme of our string. We binary pattern match to get the first grapheme of the string, and call `match_child/3`, which will either return the matching node id or nil.
+
+1. If a matching node id is returned, set both `current` and `explicit` to that node id, and increment `extension: {_, ext}`.
+
+1. If there is no match, create a new node with `new_node("root")`. Add the label `{hash, phase..-1}`
+
+  if there is a match, make that node current and explicit, increment the index, increment the extension, and return the tree
+
+  if there is no match, create a node, make its parent "root", add the grapheme to the label, add the node to root's children, set the new node to current and explicit, replace root and add the new node in nodes, add nodes and the mods to explicit/current to the tree, increment extension and return the tree
+
+  move to checking the next grapheme
+
+  start at current, check the current index on the label and compare to grapheme
+  if there is a match, increment the index for current, explicit, and the extension. set cur_node but not exp_node. return the tree
+
+  if there is no match

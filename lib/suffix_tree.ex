@@ -146,7 +146,7 @@ defmodule SuffixTree do
 
   @spec extend(st(), hash(), :last) :: st()
   @spec extend(st(), hash(), String.t()) :: st()
-  def extend(tree, hash, :last) do
+  defp extend(tree, hash, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
     # must return the tree and reset the extension in prep for the next string
@@ -186,28 +186,28 @@ defmodule SuffixTree do
   """
   # extend is complete when extension == phase
   # leaves are determined by extension, labels are determined by phase
-  def extend(
-        %{
-          nodes: nodes,
-          strings: strings,
-          current: {cur_node, cur_index},
-          explicit: {exp_node, exp_index},
-          extension: {phase, extension}
-        } = tree,
-        hash,
-        grapheme
-      ) do
+  defp extend(
+         %{
+           nodes: nodes,
+           strings: strings,
+           current: {cur_node, cur_index},
+           explicit: {exp_node, exp_index},
+           extension: {phase, extension}
+         } = tree,
+         hash,
+         grapheme
+       ) do
     # extend by grapheme
     tree = %{tree | extension: {phase, extension + 1}}
     extend(tree, hash, grapheme)
   end
 
   @spec match_child(st(), n(), String.t()) :: nid() | nil
-  def match_child(
-        %{nodes: nodes} = tree,
-        %{children: children} = _node,
-        grapheme
-      ) do
+  defp match_child(
+         %{nodes: nodes} = tree,
+         %{children: children} = _node,
+         grapheme
+       ) do
     Enum.find(
       children,
       fn child_id ->
@@ -221,7 +221,7 @@ defmodule SuffixTree do
   Returns a boolean, indicating whether the first grapheme in a node's label matches the given grapheme.
   """
   @spec child_match?(st(), n(), String.t()) :: boolean()
-  def child_match?(tree, node, grapheme) do
+  defp child_match?(tree, node, grapheme) do
     <<first::utf8, _rest::binary>> = get_label(tree, node)
     <<first::utf8>> == grapheme
   end
@@ -232,7 +232,10 @@ defmodule SuffixTree do
   # TODO: this throws when you pass it a label of nil
   # should we create a label on every new node, or handle the nil case?
   @spec get_label(st(), n()) :: String.t()
-  def get_label(%{strings: strings} = _tree, %{label: {hash, range}} = _node) do
+  defp get_label(
+         %{strings: strings} = _tree,
+         %{label: {hash, range}} = _node
+       ) do
     String.slice(strings[hash], range)
   end
 
@@ -244,21 +247,21 @@ defmodule SuffixTree do
   # on new node, add cur_node to children (sort) - parent is already set - and set the label to {hash, phase..phase}
   # return the tree
   @spec split_edge(st(), hash(), String.t()) :: st()
-  def split_edge(%{current: {cur_node, cur_index}} = tree, hash, grapheme) do
+  defp split_edge(%{current: {cur_node, cur_index}} = tree, hash, grapheme) do
     # ...
     tree
   end
 
-  def skip_count(label) do
+  defp skip_count(label) do
     # skips down the tree until we exhaust the label
   end
 
-  def remove_node(tree, node) do
+  defp remove_node(tree, node) do
     # remove the node
     tree
   end
 
-  def remove_string(tree, string) do
+  defp remove_string(tree, string) do
     # removing a string from the tree may be as simple as
     # * iterate through each node
     # * delete the hash from leaves
@@ -269,7 +272,7 @@ defmodule SuffixTree do
     tree
   end
 
-  def hash(string) do
+  defp hash(string) do
     Murmur.hash_x86_128(string)
   end
 end
