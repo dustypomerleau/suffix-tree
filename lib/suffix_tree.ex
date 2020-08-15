@@ -14,13 +14,13 @@ defmodule SuffixTree do
           nodes: %{nid() => n()},
           strings: %{hash() => String.t()},
           current: {nid(), index()},
-          explicit: {nid(), index()},
-          extension: {index(), index()}
+          explicit: nid(),
+          phase: {index(), index()}
           # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
 
   @enforce_keys [:id, :nodes, :strings]
-  defstruct [:id, :nodes, :strings, :current, :explicit, :extension]
+  defstruct [:id, :nodes, :strings, :current, :explicit, :phase]
 
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
@@ -45,8 +45,8 @@ defmodule SuffixTree do
           is_map(strings) -> strings
         end,
       current: {"root", 0},
-      explicit: {"root", 0},
-      extension: {0, 0}
+      explicit: "root",
+      phase: {0, 0}
     }
   end
 
@@ -93,8 +93,7 @@ defmodule SuffixTree do
          %{
            nodes: nodes,
            current: {"root", cur_index},
-           explicit: {_exp_node, exp_index},
-           extension: {phase, _extension}
+           phase: {phase, _extension}
          } = tree,
          hash,
          <<grapheme::utf8, rest::binary>> = _string
@@ -113,7 +112,7 @@ defmodule SuffixTree do
             tree
             | nodes: nodes,
               current: {new_child.id, cur_index + 1},
-              explicit: {new_child.id, exp_index + 1}
+              explicit: new_child.id
           }
 
         # changing exp_node on an implicit match is unique to extension 0
@@ -121,7 +120,7 @@ defmodule SuffixTree do
           %{
             tree
             | current: {matching_child_id, cur_index + 1},
-              explicit: {matching_child_id, exp_index + 1}
+              explicit: matching_child_id
           }
       end
 
@@ -130,17 +129,17 @@ defmodule SuffixTree do
     # extend should update extension before returning the tree
     # extend :last should reset phase and extension before returning the tree
     # TODO: you need to add leaves as well as label
-    tree = %{tree | extension: {phase + 1, 0}}
+    tree = %{tree | phase: {phase + 1, 0}}
     add_string(tree, hash, rest)
   end
 
   defp add_string(
-         %{extension: {phase, _extension}} = tree,
+         %{phase: {phase, _extension}} = tree,
          hash,
          <<grapheme::utf8, rest::binary>> = _string
        ) do
     tree = extend(tree, hash, <<grapheme::utf8>>)
-    tree = %{tree | extension: {phase + 1, 0}}
+    tree = %{tree | phase: {phase + 1, 0}}
     add_string(tree, hash, rest)
   end
 
@@ -150,7 +149,7 @@ defmodule SuffixTree do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
     # must return the tree and reset the extension in prep for the next string
-    %{tree | extension: {0, 0}}
+    %{tree | phase: {0, 0}}
   end
 
   @doc """
@@ -191,14 +190,14 @@ defmodule SuffixTree do
            nodes: nodes,
            strings: strings,
            current: {cur_node, cur_index},
-           explicit: {exp_node, exp_index},
-           extension: {phase, extension}
+           explicit: exp_node,
+           phase: {phase, extension}
          } = tree,
          hash,
          grapheme
        ) do
     # extend by grapheme
-    tree = %{tree | extension: {phase, extension + 1}}
+    tree = %{tree | phase: {phase, extension + 1}}
     extend(tree, hash, grapheme)
   end
 
@@ -252,7 +251,7 @@ defmodule SuffixTree do
     tree
   end
 
-  defp skip_count(label) do
+  defp skip_count(tree, label) do
     # skips down the tree until we exhaust the label
   end
 
