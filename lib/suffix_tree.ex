@@ -292,7 +292,7 @@ defmodule SuffixTree do
     {tree, label} =
       case current.link do
         nil ->
-          label = label <> get_label(tree, current, 0..cur_index)
+          label = get_label(tree, current, 0..cur_index) <> label
           parent_id = nodes[current.parent].id
           tree = %{tree | current: {parent_id, -1}}
           build_label(tree, label)
