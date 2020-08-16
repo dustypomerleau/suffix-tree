@@ -283,9 +283,15 @@ defmodule SuffixTree do
     2. clarify how we hold onto the origin of the suffix link if it's not kept as cur_nid (will it be explicit?)
   """
   @spec build_label(st(), String.t()) :: {st(), String.t()}
+  def build_label(tree, label \\ "")
+
+  def build_label(%{current: {"root", _cur_index}} = tree, label) do
+    {tree, label}
+  end
+
   def build_label(
         %{nodes: nodes, current: {cur_nid, cur_index}} = tree,
-        label \\ ""
+        label
       ) do
     current = nodes[cur_nid]
 
