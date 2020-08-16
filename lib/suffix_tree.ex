@@ -226,15 +226,26 @@ defmodule SuffixTree do
   end
 
   @doc """
-  Takes a tree and a node, and returns the label on the node.
+  Takes a tree and a node, and returns the label on the node. An optional subrange may be given, for returning only a portion of the label (for example, up to the current index). Returns an empty string if the label is nil, or if the subrange is outside the range of the label.
   """
   # TODO: this throws when you pass it a label of nil
   # should we create a label on every new node, or handle the nil case?
-  @spec get_label(st(), n()) :: String.t()
+  @spec get_label(st(), n(), Range.t()) :: String.t()
+  def get_label(tree, node, subrange \\ 0..-1)
+
+  def get_label(_tree, %{label: nil} = _node, _subrange), do: ""
+
   def get_label(
         %{strings: strings} = _tree,
-        %{label: {hash, range}} = _node
+        %{label: {hash, range_first.._range_last = range}} = _node,
+        subrange_first..subrange_last = subrange
       ) do
+    range =
+      case subrange do
+        0..-1 -> range
+        _ -> (range_first + subrange_first)..(range_first + subrange_last)
+      end
+
     String.slice(strings[hash], range)
   end
 
