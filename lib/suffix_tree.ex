@@ -179,7 +179,7 @@ defmodule SuffixTree do
   move to checking the next grapheme
 
   start at current, check the current index on the label and compare to grapheme
-  if there is a match, increment the index for current, explicit, and the extension. set cur_node but not exp_node. return the tree
+  if there is a match, increment the index for current, explicit, and the extension. set cur_nid but not exp_node. return the tree
 
   if there is no match
   """
@@ -189,7 +189,7 @@ defmodule SuffixTree do
         %{
           nodes: nodes,
           strings: strings,
-          current: {cur_node, cur_index},
+          current: {cur_nid, cur_index},
           explicit: exp_node,
           phase: {phase, extension}
         } = tree,
@@ -249,15 +249,15 @@ defmodule SuffixTree do
     String.slice(strings[hash], range)
   end
 
-  # the tree has the node whose label we'll split as cur_node
+  # the tree has the node whose label we'll split as cur_nid
   # cur_index is where the mismatch occurred
-  # first call new_node() and make the parent the same as cur_node
-  # on the parent, remove cur_node from children and add new node to children (sort)
-  # on cur_node, change parent to new node, and change label to start at cur_index
-  # on new node, add cur_node to children (sort) - parent is already set - and set the label to {hash, phase..phase}
+  # first call new_node() and make the parent the same as cur_nid
+  # on the parent, remove cur_nid from children and add new node to children (sort)
+  # on cur_nid, change parent to new node, and change label to start at cur_index
+  # on new node, add cur_nid to children (sort) - parent is already set - and set the label to {hash, phase..phase}
   # return the tree
   @spec split_edge(st(), hash(), String.t()) :: st()
-  def split_edge(%{current: {cur_node, cur_index}} = tree, hash, grapheme) do
+  def split_edge(%{current: {cur_nid, cur_index}} = tree, hash, grapheme) do
     # ...
     tree
   end
@@ -266,10 +266,43 @@ defmodule SuffixTree do
   Takes a suffix tree, starts at the location given by `current:`, and follows `current`'s suffix link, walking down until it has moved a distance equivalent to the length of `current`'s label up to the current grapheme. Returns the node and index where the next grapheme should be compared.
   """
   @spec skip_count(st) :: {n(), index()}
-  def skip_count(%{nodes: nodes, current: {cur_node, cur_index}} = tree) do
-    target = nodes[cur_node.parent.link]
-    # skips down the tree until we exhaust the label
+  def skip_count(%{nodes: nodes, current: {cur_nid, cur_index}} = tree) do
+    {tree, label} = build_label(tree)
+    # on return of build_label:
+    # tree will have `current` set to where we start the downwalk
+    # label will be the fully-concatenated label for the downwalk
+    # downwalk code here...
+
     # {node, index}
+  end
+
+  @doc """
+  If the current node has a link, we get the sublabel up to the current index, and return the label, setting `current` to the `id` of the node from which we start the down-walk (at position `-1`). If the node has no link, we grab the label (up to `cur_index`), set the parent to `cur_nid` (this time with a `cur_index` of `-1`) and check again for a link by calling the function recursively. The label on parent will only be concatenated with the existing label if the parent has no link, otherwise we can simply return the tree, using the `link` value on `current` as the target `nid` for the downwalk.
+  TODO:
+    1. revisit doing this with IO lists or reduce
+    2. clarify how we hold onto the origin of the suffix link if it's not kept as cur_nid (will it be explicit?)
+  """
+  @spec build_label(st(), String.t()) :: {st(), String.t()}
+  def build_label(
+        %{nodes: nodes, current: {cur_nid, cur_index}} = tree,
+        label \\ ""
+      ) do
+    current = nodes[cur_nid]
+
+    {tree, label} =
+      case current.link do
+        nil ->
+          label = label <> get_label(tree, current, 0..cur_index)
+          parent_id = nodes[current.parent].id
+          tree = %{tree | current: {parent_id, -1}}
+          build_label(tree, label)
+
+        _ ->
+          tree = %{tree | current: {current.link, -1}}
+          {tree, label}
+      end
+
+    {tree, label}
   end
 
   def remove_node(tree, node) do
