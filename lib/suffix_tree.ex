@@ -221,8 +221,8 @@ defmodule SuffixTree do
   """
   @spec child_match?(st(), n(), String.t()) :: boolean()
   def child_match?(tree, node, grapheme) do
-    <<first::utf8, _rest::binary>> = get_label(tree, node)
-    <<first::utf8>> == grapheme
+    first = get_label(tree, node, 0..0)
+    first == grapheme
   end
 
   @doc """
