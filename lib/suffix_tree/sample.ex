@@ -5,6 +5,7 @@ defmodule SuffixTree.Sample do
       explicit: "root",
       id: "WqFqgrpY2xPtZjoVhYnbgQ",
       nodes: %{
+        # nd (nd)
         "4rQYWUSp2K7Ld0A6ykFmlA" => %SuffixTree.Node{
           children: [],
           id: "4rQYWUSp2K7Ld0A6ykFmlA",
@@ -13,6 +14,7 @@ defmodule SuffixTree.Sample do
           link: nil,
           parent: "root"
         },
+        # d (bad)
         "5O5iub3q8JeRLmGWAoKX9g" => %SuffixTree.Node{
           children: [],
           id: "5O5iub3q8JeRLmGWAoKX9g",
@@ -21,6 +23,7 @@ defmodule SuffixTree.Sample do
           link: "9npec939_hLfb3HGppTKeA",
           parent: "Uc_mQT4WqQ28NITsS0h09Q"
         },
+        # g (bag)
         "9N-Q5Ty2Toxzo7916kkFTw" => %SuffixTree.Node{
           children: [],
           id: "9N-Q5Ty2Toxzo7916kkFTw",
@@ -29,6 +32,7 @@ defmodule SuffixTree.Sample do
           link: "L-np9X_0sE0RDqpjrYvU-A",
           parent: "Uc_mQT4WqQ28NITsS0h09Q"
         },
+        # d (ad)
         "9npec939_hLfb3HGppTKeA" => %SuffixTree.Node{
           children: [],
           id: "9npec939_hLfb3HGppTKeA",
@@ -37,14 +41,20 @@ defmodule SuffixTree.Sample do
           link: "iXcCzLfHOB7S2Eo-txir_Q",
           parent: "B1VB74WCJfgqQTCYn8g_Qg"
         },
+        # a
         "B1VB74WCJfgqQTCYn8g_Qg" => %SuffixTree.Node{
-          children: ["L-np9X_0sE0RDqpjrYvU-A", "9npec939_hLfb3HGppTKeA", "LJmmeFb6FnYCkRM-D2sqww"],
+          children: [
+            "9npec939_hLfb3HGppTKeA",
+            "L-np9X_0sE0RDqpjrYvU-A",
+            "LJmmeFb6FnYCkRM-D2sqww"
+          ],
           id: "B1VB74WCJfgqQTCYn8g_Qg",
           label: {242_629_559_588_796_728_772_605_389_698_047_948_072, 1..1},
           leaves: nil,
           link: nil,
           parent: "root"
         },
+        # g (ag)
         "L-np9X_0sE0RDqpjrYvU-A" => %SuffixTree.Node{
           children: [],
           id: "L-np9X_0sE0RDqpjrYvU-A",
@@ -53,6 +63,7 @@ defmodule SuffixTree.Sample do
           link: "qriCOXxgMBwOXEzfc7e1Gg",
           parent: "B1VB74WCJfgqQTCYn8g_Qg"
         },
+        # nd (and)
         "LJmmeFb6FnYCkRM-D2sqww" => %SuffixTree.Node{
           children: [],
           id: "LJmmeFb6FnYCkRM-D2sqww",
@@ -61,14 +72,19 @@ defmodule SuffixTree.Sample do
           link: "4rQYWUSp2K7Ld0A6ykFmlA",
           parent: "B1VB74WCJfgqQTCYn8g_Qg"
         },
+        # ba
         "Uc_mQT4WqQ28NITsS0h09Q" => %SuffixTree.Node{
-          children: ["9N-Q5Ty2Toxzo7916kkFTw", "5O5iub3q8JeRLmGWAoKX9g"],
+          children: [
+            "5O5iub3q8JeRLmGWAoKX9g",
+            "9N-Q5Ty2Toxzo7916kkFTw"
+          ],
           id: "Uc_mQT4WqQ28NITsS0h09Q",
           label: {242_629_559_588_796_728_772_605_389_698_047_948_072, 0..1},
           leaves: nil,
           link: "B1VB74WCJfgqQTCYn8g_Qg",
           parent: "root"
         },
+        # d (d)
         "iXcCzLfHOB7S2Eo-txir_Q" => %SuffixTree.Node{
           children: [],
           id: "iXcCzLfHOB7S2Eo-txir_Q",
@@ -77,6 +93,7 @@ defmodule SuffixTree.Sample do
           link: nil,
           parent: "root"
         },
+        # g (g)
         "qriCOXxgMBwOXEzfc7e1Gg" => %SuffixTree.Node{
           children: [],
           id: "qriCOXxgMBwOXEzfc7e1Gg",
@@ -86,7 +103,13 @@ defmodule SuffixTree.Sample do
           parent: "root"
         },
         "root" => %SuffixTree.Node{
-          children: ["Uc_mQT4WqQ28NITsS0h09Q"],
+          children: [
+            "4rQYWUSp2K7Ld0A6ykFmlA",
+            "B1VB74WCJfgqQTCYn8g_Qg",
+            "iXcCzLfHOB7S2Eo-txir_Q",
+            "qriCOXxgMBwOXEzfc7e1Gg",
+            "Uc_mQT4WqQ28NITsS0h09Q"
+          ],
           id: "root",
           label: nil,
           leaves: nil,
