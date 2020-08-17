@@ -314,10 +314,8 @@ defmodule SuffixTree do
 
   @spec down_walk(st(), String.t()) :: st()
   def down_walk(tree, <<>>) do
-    # TODO: handle when label is an empty string,
-    # you need to return something that indicates a new child of root must be created here
-    # but at the same time this basically shouldn't be happening, because why are you calling skip count when a single grapheme child of root is current?
-    # NOTE: you can't binary pattern match on "" it will throw a match error
+    # This case should never occur, but if it does, just return the tree.
+    tree
   end
 
   def down_walk(
@@ -341,7 +339,8 @@ defmodule SuffixTree do
           down_walk(tree, label)
 
         true ->
-          %{tree | current: {current.id, label_len}}
+          # subtract 1 to make the index 0-based.
+          %{tree | current: {current.id, label_len - 1}}
       end
 
     tree
