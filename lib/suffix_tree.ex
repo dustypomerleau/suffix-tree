@@ -264,10 +264,14 @@ defmodule SuffixTree do
 
   @doc """
   Takes a suffix tree, starts at the location given by `current`, climbing up the tree and accumulating the label, until it reaches a node with a suffix link. It then walks down, until the cumulative label is exhausted, returning that `{node, index}` as `current` on the new tree.
+  TODO: if you skip count from a child of root, the algorithm will match the starting node. No good...
+  up_walk seems to work, but down_walk does not
+  this has something to do with following the same path right back down
+  we need to fix the root case of build label so that it goes to the child of the next extension
   """
   @spec skip_count(st()) :: st()
   def skip_count(tree) do
-    {tree, label} = build_label(tree)
+    {tree, label} = up_walk(tree)
     down_walk(tree, label)
   end
 
@@ -277,14 +281,16 @@ defmodule SuffixTree do
     1. revisit doing this with IO lists or reduce
     2. clarify how we hold onto the origin of the suffix link if it's not kept as cur_nid (will it be explicit?)
   """
-  @spec build_label(st(), String.t()) :: {st(), String.t()}
-  def build_label(tree, label \\ "")
+  @spec up_walk(st(), String.t()) :: {st(), String.t()}
+  def up_walk(tree, label \\ "")
 
-  def build_label(%{current: {"root", _cur_index}} = tree, label) do
+  def up_walk(%{current: {"root", _cur_index}} = tree, label) do
+    # TODO: handle the case of empty string, as this will be a match error
+    <<_first::utf8, label::binary>> = label
     {tree, label}
   end
 
-  def build_label(
+  def up_walk(
         %{nodes: nodes, current: {cur_nid, cur_index}} = tree,
         label
       ) do
@@ -296,7 +302,7 @@ defmodule SuffixTree do
           label = get_label(tree, current, 0..cur_index) <> label
           parent_id = nodes[current.parent].id
           tree = %{tree | current: {parent_id, -1}}
-          build_label(tree, label)
+          up_walk(tree, label)
 
         _ ->
           tree = %{tree | current: {current.link, -1}}
@@ -307,6 +313,13 @@ defmodule SuffixTree do
   end
 
   @spec down_walk(st(), String.t()) :: st()
+  def down_walk(tree, <<>>) do
+    # TODO: handle when label is an empty string,
+    # you need to return something that indicates a new child of root must be created here
+    # but at the same time this basically shouldn't be happening, because why are you calling skip count when a single grapheme child of root is current?
+    # NOTE: you can't binary pattern match on "" it will throw a match error
+  end
+
   def down_walk(
         %{nodes: nodes, current: {cur_nid, _cur_index}} = tree,
         <<grapheme::utf8, _rest::binary>> = label
