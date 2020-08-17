@@ -263,17 +263,12 @@ defmodule SuffixTree do
   end
 
   @doc """
-  Takes a suffix tree, starts at the location given by `current:`, and follows `current`'s suffix link, walking down until it has moved a distance equivalent to the length of `current`'s label up to the current grapheme. Returns the node and index where the next grapheme should be compared.
+  Takes a suffix tree, starts at the location given by `current`, climbing up the tree and accumulating the label, until it reaches a node with a suffix link. It then walks down, until the cumulative label is exhausted, returning that `{node, index}` as `current` on the new tree.
   """
-  @spec skip_count(st) :: {n(), index()}
-  def skip_count(%{nodes: nodes, current: {cur_nid, cur_index}} = tree) do
+  @spec skip_count(st()) :: st()
+  def skip_count(tree) do
     {tree, label} = build_label(tree)
-    # on return of build_label:
-    # tree will have `current` set to where we start the downwalk
-    # label will be the fully-concatenated label for the downwalk
-    # downwalk code here...
-
-    # {node, index}
+    down_walk(tree, label)
   end
 
   @doc """
@@ -309,6 +304,34 @@ defmodule SuffixTree do
       end
 
     {tree, label}
+  end
+
+  @spec down_walk(st(), String.t()) :: st()
+  def down_walk(
+        %{nodes: nodes, current: {cur_nid, _cur_index}} = tree,
+        <<grapheme::utf8, _rest::binary>> = label
+      ) do
+    current = nodes[cur_nid]
+    # TODO: this code throws if `match_child` returns `nil`
+    # but this should raise as it indicates a malconstructed tree
+    # by definition, the downwalk from a suffix link should match
+    matching_child_id = match_child(tree, current, <<grapheme::utf8>>)
+    current = nodes[matching_child_id]
+    cur_len = String.length(get_label(tree, current))
+    label_len = String.length(label)
+
+    tree =
+      cond do
+        cur_len < label_len ->
+          tree = %{tree | current: {current.id, -1}}
+          label = String.slice(label, cur_len..-1)
+          down_walk(tree, label)
+
+        true ->
+          %{tree | current: {current.id, label_len}}
+      end
+
+    tree
   end
 
   def remove_node(tree, node) do
