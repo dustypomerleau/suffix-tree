@@ -348,14 +348,25 @@ defmodule SuffixTree do
 
   @spec add_child(st(), n(), map()) :: st()
   def add_child(
-        %{nodes: nodes} = tree,
+        %{nodes: nodes, explicit: explicit} = tree,
         %{children: children} = parent,
         fields \\ %{}
       ) do
     child = Map.merge(new_node(parent.id), fields)
-    children = [child.id | children] |> Enum.sort()
-    parent = %{parent | children: children}
-    %{tree | nodes: Map.merge(nodes, %{parent.id => parent, child.id => child})}
+    parent = %{parent | children: [child.id | children] |> Enum.sort()}
+    explicit = %{nodes[explicit] | link: child.id}
+
+    %{
+      tree
+      | nodes:
+          Map.merge(nodes, %{
+            parent.id => parent,
+            child.id => child,
+            explicit.id => explicit
+          }),
+        current: {child.id, 0},
+        explicit: child.id
+    }
   end
 
   def remove_node(tree, node) do
