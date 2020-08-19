@@ -41,23 +41,6 @@ defmodule SuffixTree.Node do
     Enum.empty?(children)
   end
 
-  # adding parent is still necessary, because we may be changing existing nodes when we split a label
-  @spec add_child(n(), n()) :: {n(), n()}
-  def add_child(
-        %{id: parent_id, children: children} = parent,
-        %{id: child_id} = child
-      ) do
-    child = add_parent(parent_id, child)
-    children = [child_id | children] |> Enum.sort()
-    parent = %{parent | children: children}
-    {parent, child}
-  end
-
-  @spec add_parent(nid(), n()) :: n()
-  def add_parent(parent_id, child) do
-    %{child | parent: parent_id}
-  end
-
   @spec remove_child(n(), nid()) :: n()
   def remove_child(%{children: children} = parent, child_id) do
     children = List.delete(children, child_id)
