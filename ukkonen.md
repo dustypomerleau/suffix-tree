@@ -2,7 +2,7 @@ notes:
 
 Starting from the root is unique, because we don't care about the index, and instead go straight to matching the children for our comparison.
 
-If we're starting from another node, we check the current index first. If the current index is nil, then we're off the end of the string and we need to match children for our comparison.
+If we're starting from another node, we check the current index first. If the current index is nil, then we're off the end of the string and we need to match children for our comparison. In fact, it's even a bit more complicated than that, because the underlying string is longer than the label, so we need to ensure that our location of comparison is not past the last location on the label, rather than just looking at that index on the string.
 
 In either case, either the grapheme is there or it's not.
 
