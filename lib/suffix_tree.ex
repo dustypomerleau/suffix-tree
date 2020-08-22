@@ -13,14 +13,21 @@ defmodule SuffixTree do
           id: stid(),
           nodes: %{nid() => n()},
           strings: %{hash() => String.t()},
-          current: {nid(), index()},
-          explicit: nid(),
-          phase: {index(), index()}
+          current: %{
+            node: nid(),
+            index: index(),
+            explicit: nid(),
+            hash: hash(),
+            phase: index(),
+            extension: index()
+          }
           # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
 
-  @enforce_keys [:id, :nodes, :strings]
-  defstruct [:id, :nodes, :strings, :current, :explicit, :phase]
+  @enforce_keys :id
+  defstruct [:id, :nodes, :strings, :current]
+
+  # TODO: now that hash is on the tree, review whether we need to pass it as a param in each function or get it from the tree
 
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
@@ -44,9 +51,13 @@ defmodule SuffixTree do
           is_list(strings) -> build_strings(strings)
           is_map(strings) -> strings
         end,
-      current: {"root", 0},
-      explicit: "root",
-      phase: {0, 0}
+      current: %{
+        node: "root",
+        index: 0,
+        explicit: nil,
+        phase: 0,
+        extension: 0
+      }
     }
   end
 
@@ -90,11 +101,7 @@ defmodule SuffixTree do
   end
 
   def add_string(
-        %{
-          nodes: nodes,
-          current: {"root", cur_index},
-          phase: {phase, _extension}
-        } = tree,
+        %{nodes: nodes, current: %{node: "root", phase: phase}} = tree,
         hash,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
@@ -104,23 +111,23 @@ defmodule SuffixTree do
     tree =
       case matching_child_id do
         nil ->
-          new_child = %{new_node("root") | label: {hash, phase..-1}}
-          {root, new_child} = add_child(root, new_child)
-          nodes = Map.merge(nodes, %{"root" => root, new_child.id => new_child})
-
-          %{
-            tree
-            | nodes: nodes,
-              current: {new_child.id, cur_index + 1},
-              explicit: new_child.id
-          }
+          add_child(tree, root, %{
+            label: {hash, phase..-1},
+            # in this case leaf is 0 but in other extenstions will be extension
+            leaves: [{hash, 0}]
+          })
 
         # changing exp_node on an implicit match is unique to extension 0
+        # TODO: pattern match extension 0 instead
+        # this is broken thinking i think - why are you incrementing cur_index when you just switched current to the child? should be 0, no?
         _child_id ->
           %{
             tree
-            | current: {matching_child_id, cur_index + 1},
-              explicit: matching_child_id
+            | current: %{
+                node: matching_child_id,
+                index: 0,
+                explicit: matching_child_id
+              }
           }
       end
 
@@ -129,17 +136,17 @@ defmodule SuffixTree do
     # extend should update extension before returning the tree
     # extend :last should reset phase and extension before returning the tree
     # TODO: you need to add leaves as well as label
-    tree = %{tree | phase: {phase + 1, 0}}
+    tree = %{tree | current: %{phase: phase + 1}}
     add_string(tree, hash, rest)
   end
 
   def add_string(
-        %{phase: {phase, _extension}} = tree,
+        %{current: %{phase: phase}} = tree,
         hash,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
     tree = extend(tree, hash, <<grapheme::utf8>>)
-    tree = %{tree | phase: {phase + 1, 0}}
+    tree = %{tree | current: %{phase: phase + 1, extension: 0}}
     add_string(tree, hash, rest)
   end
 
@@ -149,7 +156,7 @@ defmodule SuffixTree do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
     # must return the tree and reset the extension in prep for the next string
-    %{tree | phase: {0, 0}}
+    %{tree | current: %{phase: 0, extension: 0}}
   end
 
   @doc """
@@ -189,15 +196,54 @@ defmodule SuffixTree do
         %{
           nodes: nodes,
           strings: strings,
-          current: {cur_nid, cur_index},
-          explicit: exp_node,
-          phase: {phase, extension}
+          current: %{
+            node: cur_nid,
+            index: cur_index,
+            explicit: exp_node,
+            phase: phase,
+            extension: extension
+          }
         } = tree,
         hash,
         grapheme
       ) do
-    # extend by grapheme
-    tree = %{tree | phase: {phase, extension + 1}}
+    tree =
+      case nodes[cur_nid].link do
+        nil ->
+          %{current: %{node: cur_nid, index: cur_index}} = skip_count(tree)
+
+        _ ->
+          current = nodes[cur_nid]
+          target_nid = nodes[current.link].id
+
+          %{current: %{node: cur_nid, index: cur_index}} = %{
+            tree
+            | current: %{node: target_nid, index: -1}
+          }
+      end
+
+    # by definition, if there is a suffix link, we can't add to the label
+    # so either there is a matching child or we add a child, full stop
+    # in the case where there is no suffix link, and we get to the target node by calling skip_count, we need to make a comparison at that location
+    # but we should only need to call skip count when we have just created a node (what other circumstance would not already have a link?)
+    # so skip count needs to deal with the situation where we are one short of the desired length for the downwalk, but there is no matching child
+    # every time we create a new node this will be likely (not guaranteed in a generalized tree) to happen
+    current = nodes[cur_nid]
+    cur_grapheme = get_label(tree, current, cur_index..cur_index)
+
+    cond do
+      is_nil(cur_index) ->
+        matching_child_id = match_child(tree, current, grapheme)
+
+      # add the grapheme
+      cur_grapheme == grapheme ->
+        nil
+        # return
+    end
+
+    # check for equality at the new location
+    # if equality is present
+    tree = %{tree | current: %{extension: extension + 1}}
     extend(tree, hash, grapheme)
   end
 
@@ -227,9 +273,8 @@ defmodule SuffixTree do
 
   @doc """
   Takes a tree and a node, and returns the label on the node. An optional subrange may be given, for returning only a portion of the label (for example, up to the current index). Returns an empty string if the label is nil, or if the subrange is outside the range of the label.
+  TODO: there is an issue here, where passing a subrange that is outside the actual range, can give you parts of the string that aren't actually in the label. For example get_label(tree, node, -1..-1) on a one-character label will still get the previous character in the string, even if that label isn't supposed to contain it. So we need a check that subrange is within the label somehow.
   """
-  # TODO: this throws when you pass it a label of nil
-  # should we create a label on every new node, or handle the nil case?
   @spec get_label(st(), n(), Range.t()) :: String.t()
   def get_label(tree, node, subrange \\ 0..-1)
 
@@ -257,7 +302,11 @@ defmodule SuffixTree do
   # on new node, add cur_nid to children (sort) - parent is already set - and set the label to {hash, phase..phase}
   # return the tree
   @spec split_edge(st(), hash(), String.t()) :: st()
-  def split_edge(%{current: {cur_nid, cur_index}} = tree, hash, grapheme) do
+  def split_edge(
+        %{current: %{node: cur_nid, index: cur_index}} = tree,
+        hash,
+        grapheme
+      ) do
     # ...
     tree
   end
@@ -284,14 +333,14 @@ defmodule SuffixTree do
   @spec up_walk(st(), String.t()) :: {st(), String.t()}
   def up_walk(tree, label \\ "")
 
-  def up_walk(%{current: {"root", _cur_index}} = tree, label) do
+  def up_walk(%{current: %{node: "root"}} = tree, label) do
     # TODO: handle the case of empty string, as this will be a match error
     <<_first::utf8, label::binary>> = label
     {tree, label}
   end
 
   def up_walk(
-        %{nodes: nodes, current: {cur_nid, cur_index}} = tree,
+        %{nodes: nodes, current: %{node: cur_nid, index: cur_index}} = tree,
         label
       ) do
     current = nodes[cur_nid]
@@ -301,11 +350,11 @@ defmodule SuffixTree do
         nil ->
           label = get_label(tree, current, 0..cur_index) <> label
           parent_id = nodes[current.parent].id
-          tree = %{tree | current: {parent_id, -1}}
+          tree = %{tree | current: %{node: parent_id, index: -1}}
           up_walk(tree, label)
 
         _ ->
-          tree = %{tree | current: {current.link, -1}}
+          tree = %{tree | current: %{node: current.link, index: -1}}
           {tree, label}
       end
 
@@ -319,36 +368,50 @@ defmodule SuffixTree do
   end
 
   def down_walk(
-        %{nodes: nodes, current: {cur_nid, _cur_index}} = tree,
+        %{nodes: nodes, current: %{node: cur_nid}} = tree,
         <<grapheme::utf8, _rest::binary>> = label
       ) do
     current = nodes[cur_nid]
-    # TODO: this code throws if `match_child` returns `nil`
-    # but this should raise as it indicates a malconstructed tree
-    # by definition, the downwalk from a suffix link should match
+
+    # correct this so that the nil case for matching child id calls add_child(tree, parent, grapheme) which should be moved into suffix_tree from node
+    # that way we are returning with the necessary node already in place
     matching_child_id = match_child(tree, current, <<grapheme::utf8>>)
-    current = nodes[matching_child_id]
-    cur_len = String.length(get_label(tree, current))
-    label_len = String.length(label)
 
     tree =
-      cond do
-        cur_len < label_len ->
-          tree = %{tree | current: {current.id, -1}}
-          label = String.slice(label, cur_len..-1)
-          down_walk(tree, label)
+      case matching_child_id do
+        nil ->
+          # if you need to create a child, you need current hash and index!
+          # this map should contain label and leaves
+          # can we derive this from explicit? or do we need to pass it in?
+          # probably better to leave this out of skip_count and just use map update syntax in the calling function
+          add_child(tree, current, %{})
 
-        true ->
-          # subtract 1 to make the index 0-based.
-          %{tree | current: {current.id, label_len - 1}}
+        _ ->
+          current = nodes[matching_child_id]
+          cur_len = String.length(get_label(tree, current))
+          label_len = String.length(label)
+
+          cond do
+            cur_len < label_len ->
+              tree = %{tree | current: %{node: current.id, index: -1}}
+              label = String.slice(label, cur_len..-1)
+              down_walk(tree, label)
+
+            true ->
+              # subtract 1 to make the index 0-based.
+              %{tree | current: %{node: current.id, index: label_len - 1}}
+          end
       end
 
     tree
   end
 
+  # TODO: handle leaves - actually this would be passed in `fields`.
+  # reassess whether we can rely on this function only being called in circumstances where the correct suffix link is explicit -> child
+  # are there scenarios where we create a child and don't want the link?
   @spec add_child(st(), n(), map()) :: st()
   def add_child(
-        %{nodes: nodes, explicit: explicit} = tree,
+        %{nodes: nodes, current: %{explicit: explicit}} = tree,
         %{children: children} = parent,
         fields \\ %{}
       ) do
@@ -364,8 +427,7 @@ defmodule SuffixTree do
             child.id => child,
             explicit.id => explicit
           }),
-        current: {child.id, 0},
-        explicit: child.id
+        current: %{node: child.id, index: 0, explicit: child.id}
     }
   end
 
