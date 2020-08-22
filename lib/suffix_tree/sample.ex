@@ -1,9 +1,14 @@
 defmodule SuffixTree.Sample do
   def sample() do
     %SuffixTree{
-      current: {"root", 0},
-      explicit: "root",
       id: "WqFqgrpY2xPtZjoVhYnbgQ",
+      current: %{
+        node: "root",
+        index: 0,
+        explicit: nil,
+        phase: 0,
+        extension: 0
+      },
       nodes: %{
         # nd (nd)
         "4rQYWUSp2K7Ld0A6ykFmlA" => %SuffixTree.Node{
@@ -117,7 +122,6 @@ defmodule SuffixTree.Sample do
           parent: nil
         }
       },
-      phase: {0, 0},
       strings: %{
         119_986_673_794_530_177_314_783_485_916_755_773_721 => "and",
         242_629_559_588_796_728_772_605_389_698_047_948_072 => "bag",
