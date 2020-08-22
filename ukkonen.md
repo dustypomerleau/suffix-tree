@@ -1,3 +1,19 @@
+notes:
+
+Starting from the root is unique, because we don't care about the index, and instead go straight to matching the children for our comparison.
+
+If we're starting from another node, we check the current index first. If the current index is nil, then we're off the end of the string and we need to match children for our comparison.
+
+In either case, either the grapheme is there or it's not.
+
+If the grapheme is there, explicit stays the same (including if it's nil). We increment extension, but stay in the phase. Then we choose our next site of comparison by following the link, or if there is no link, by calling skip_count.
+
+If the grapheme is not there, we create a node. Whenever we create a node, if there is an explicit we link it, then the new node becomes explicit, we increment extension, and we skip_count to find the next comparison.
+
+We increment extension each time either way, so we need to check at the end to see if extension == phase. If it is, then we increment phase and reset extension, and we also need to set current node to the value of explicit I believe (the starting point for the next phase, since all the other extensions in that phase will have been implicit).
+
+The key question you need to answer is how we ensure that we start with the correct value of extension, given that we might skip over some extensions if they would be done implicitly. Just resetting to 0 is not enough.
+
 # Esko Ukkonen's algorithm for building a suffix tree
 
 **NOTE:** This document is meant as a convenient reference for those working on the repository. By itself, it is not sufficient to teach Ukkonen's algorithm. If you are interested in learning Ukkonen's approach to suffix tree construction, I would strongly recommend Dan Gusfeld's _Algorithms on Strings, Trees, and Sequences_.
@@ -41,15 +57,50 @@ incorporate this into above:
   # the corollary to that is that you have to increment extension
 -->
 
+## Basic principles
+
+1. If you invoke rule 2 on a given extension, then you will never need to return to that node during the addition of this particular string, as our method of terminating the label at `-1` will ensure all further phases are performed implicitly on that node. Put differently, using the label `..-1` means that all explicit extensions will require the creation of a new node. You do, however, need to add a leaf for `hash, extension`, store that node in `explicit` and `current`, and start `skip_count` from there. Even if you make changes to `current`, you will need to keep that node as `explicit` until you complete `skip_count` and create the next node. Then you can fill `link` on the node and make the new node `explicit`, before repeating `skip_count`, cycling this process until all extensions in the phase are complete.
+
+1. If you have set a newly created node to current, you need to increment `cur_index` to check the grapheme from the next phase. Then the length of the label up to `cur_index` will be the offset required for checking the grapheme match on the down-walk of `skip_count`. So just before you start the next phase (by calling `add_string/3` on `rest`), you need to increment `phase`, reset `extension`, and increment `cur_index`.
+
+1. If you invoke rule 3, then - although you are done with the phase - you still need to increment `cur_index`, even though you are keeping `cur_node`.
+
 ## Steps for adding a string to the tree
 
 1. First confirm that the string is present in the strings map. In practice, we do this by exposing `add_string/2`, which calls `Map.put_new/3`, and privatizing `add_string/3`, which will only be called after `%{hash => string}` is added to strings. TODO: handle collisions.
 
-1. Check for a child of root whose label begins with the first grapheme of our string. We binary pattern match to get the first grapheme of the string, and call `match_child/3`, which will either return the matching node id or nil.
+1. Check for a child of `cur_node` (initially root) whose label begins with the first grapheme of our string. We binary pattern match to get the first grapheme of the string, and call `match_child/3`, which will either return the matching node id or nil.
 
-1. If a matching node id is returned, set both `current` and `explicit` to that node id, and increment `extension: {_, ext}`.
+1. If a matching node id is returned, set `explicit` to that node id with an index of 0 (`current` will stay the same (root) for now), and increment both phase and extension (we increment phase here because phase 0 only has 1 extension, so we're done, but even if we are in a higher phase, invoking rule 3 would end the phase anyway). Return the tree and call `add_string/3` on `rest`.
 
-1. If there is no match, create a new node with `new_node("root")`. Add the label `{hash, phase..-1}`
+1. If there is no match, create a new node with `new_node(nodes[cur_node].id)` (in this case, "root"). Add the label `{hash, phase..-1}`, which will start from 0, as this is the first phase. Add the leaf `{hash, phase}`. Set the newly created node to `explicit` with an index of 0 (index will always be zero for `explicit` when it is a newly created node).
+
+1. Repeat the last 3 steps with the first grapheme of `rest` (phase 1), but with slight modifications:
+
+1.
+...
+
+one thing we need to address is this:
+The plan had been to add all of the leaves during the addition of :last
+the issue with this is that we need to know the integer value of the leaf, in addition to the hash. although it is tempting to think that we can just add the leaf at the time of node creation, this creates complexity on a future string addition. but it may still work, as if we split the label, the leaf value for the terminal node will still be valid, although the label will be shorter. however the issue is when to add the leaf—once a leaf always a leaf—so i think we add right at node creation.
+
+so the rule should be - if you create a node, add the leaf for that hash, based on the value of `extension`. if you do create a node, either by splitting the label or adding a child, then by adding the leaf and the label (to -1), you are essentially done with the entire addition of the string for that extension, and you only need to use skip count once, adding the string all the way to the end each time, and then creating the suffix link. for skip count, what matters is how far along the label you are, because that's how far down you need to go after following the parent's suffix link. that value will come from current?... because you are adding the string by creating a node, you won't have to call with :last, although probably the best way to handle it is to call with :last and have a case that does nothing if you created the node (how?). if you reach :last without creating a , then check for the leaf on each node, and add it if not present. when you start :last, by definition all of the suffix links should already be in place, so you simply need to follow them
+
+
+1. Since this is a new node, it (by definition) will not have a suffix link yet. That means you must leave it as `explicit` until you add the new node for the next extension.
+
+1. In addition, since this is the first phase of our string addition, we know that it will consist of adding at most 1 node, so we can increment phase, reset extension, set `current` to root, and go on to phase 2.
+
+1. Call `add_string/3` on the updated tree and `rest`, which will again match on the root case and call `match_child/3` on root's children.
+
+
+
+
+1. If a matching node id is returned, ...
+
+1. Use `skip_count/1` to add the next extension, which will require a new node (since the last one did). `{hash, phase}` will tell us the grapheme on the current node's label. Since we just added the label, we know it has length 1, even if we added it from `phase..-1` preemptively.
+
+1. So in this case, we follow the suffix link from the parent, which will be root.
 
   if there is a match, make that node current and explicit, increment the index, increment the extension, and return the tree
 

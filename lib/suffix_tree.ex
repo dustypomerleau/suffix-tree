@@ -26,8 +26,6 @@ defmodule SuffixTree do
   @enforce_keys :id
   defstruct [:id, :nodes, :strings, :current]
 
-  # TODO: now that hash is on the tree, review whether we need to pass it as a param in each function or get it from the tree
-
   @doc """
   Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
   """
@@ -77,8 +75,6 @@ defmodule SuffixTree do
 
   @doc """
   Takes a suffix tree and uses its `strings` map to build its `nodes` map. This is typically done with the nodeless tree returned by `new_tree/1`, but can also be done with an existing tree, where new strings have been added to its `strings` map, and corresponding nodes must be created. Returns an explicit suffix tree that is ready for use.
-
-  TODO: Now that we're putting `hash` into `current`, is varying the arity still the best control flow here?
   """
   @spec build_nodes(st()) :: st()
   def build_nodes(%{strings: strings} = tree) do
@@ -125,12 +121,13 @@ defmodule SuffixTree do
         nil ->
           add_child(tree, root, %{
             label: {hash, phase..-1},
-            leaves: [{hash, extension}]
+            # NOTE: the leaves also start at phase I believe, not at extension
+            # You don't need [{hash, phase} | leaves] because this is a new node
+            leaves: [{hash, phase}]
           })
 
         # changing exp_node on an implicit match is unique to extension 0
-        # TODO: pattern match extension 0 instead
-        # this is broken thinking i think - why are you incrementing cur_index when you just switched current to the child? should be 0, no?
+        # TODO: pattern match extension 0 instead?
         _child_id ->
           %{
             tree
@@ -182,33 +179,7 @@ defmodule SuffixTree do
   @doc """
   fakedoc
 
-  update explicit whenever you
-  1. create a new node
-  1. jump to a child of last explicit to find your match (this works from root also)
-  update the index whenever you
-  1. first add a grapheme (even if implicitly) - if the addition is implicit, it will be a show stopper anyway, so you are just incrementing the position on the label for your next comparison
-  you can determine if you are first adding a grapheme by whether extension is 0
-  the corollary to that is that you have to increment extension
 
-  each call to extend is a phase
-  which means that you need to recursively call extend while updating the state params on the tree - including incrementing extension from 0..m over the course of adding a particular grapheme
-
-  ---
-
-  for a given string, first confirm that the string is present in the strings map - if not, add it - best way to do this is probably to privatize add_string/3 and expose only add_string/2
-
-  start by checking children of the root for the first grapheme as the first character of their label
-
-  if there is a match, make that node current and explicit, increment the index, increment the extension, and return the tree
-
-  if there is no match, create a node, make its parent "root", add the grapheme to the label, add the node to root's children, set the new node to current and explicit, replace root and add the new node in nodes, add nodes and the mods to explicit/current to the tree, increment extension and return the tree
-
-  move to checking the next grapheme
-
-  start at current, check the current index on the label and compare to grapheme
-  if there is a match, increment the index for current, explicit, and the extension. set cur_nid but not exp_node. return the tree
-
-  if there is no match
   """
   # extend is complete when extension == phase
   # leaves are determined by extension, labels are determined by phase
