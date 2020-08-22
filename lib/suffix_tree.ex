@@ -85,26 +85,36 @@ defmodule SuffixTree do
     Enum.reduce(
       strings,
       tree,
-      fn {hash, string}, tree -> add_string(tree, hash, string) end
+      fn {hash, string}, tree ->
+        tree = %{tree | current: %{hash: hash}}
+        add_hashed_string(tree, string)
+      end
     )
   end
 
   @spec add_string(st(), String.t()) :: st()
-  @spec add_string(st(), hash(), String.t()) :: st()
   def add_string(%{strings: strings} = tree, string) do
     hash = hash(string)
     strings = Map.put_new(strings, hash, string)
     tree = %{tree | strings: strings, current: %{hash: hash}}
-    add_string(tree, hash, string)
+    add_hashed_string(tree, string)
   end
 
-  def add_string(tree, hash, <<>>) do
-    extend(tree, hash, :last)
+  @spec add_hashed_string(st(), String.t()) :: st()
+  def add_hashed_string(tree, <<>>) do
+    extend(tree, :last)
   end
 
-  def add_string(
-        %{nodes: nodes, current: %{node: "root", phase: phase, extension: extension}} = tree,
-        hash,
+  def add_hashed_string(
+        %{
+          nodes: nodes,
+          current: %{
+            node: "root",
+            hash: hash,
+            phase: phase,
+            extension: extension
+          }
+        } = tree,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
     root = nodes["root"]
@@ -133,31 +143,40 @@ defmodule SuffixTree do
       end
 
     # NOTE:
-    # add_string should increment phase and reset extension before returning the tree
+    # add_hashed_string should increment phase and reset extension before returning the tree
     # extend should update extension before returning the tree
     # extend :last should reset phase and extension before returning the tree
     # TODO: you need to add leaves as well as label
     tree = %{tree | current: %{phase: phase + 1}}
-    add_string(tree, hash, rest)
+    add_hashed_string(tree, rest)
   end
 
-  def add_string(
+  def add_hashed_string(
         %{current: %{phase: phase}} = tree,
-        hash,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
-    tree = extend(tree, hash, <<grapheme::utf8>>)
+    tree = extend(tree, <<grapheme::utf8>>)
     tree = %{tree | current: %{phase: phase + 1, extension: 0}}
-    add_string(tree, hash, rest)
+    add_hashed_string(tree, rest)
   end
 
-  @spec extend(st(), hash(), :last) :: st()
-  @spec extend(st(), hash(), String.t()) :: st()
-  def extend(tree, hash, :last) do
+  @spec extend(st(), :last) :: st()
+  @spec extend(st(), String.t()) :: st()
+  def extend(tree, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
     # must return the tree and reset the extension in prep for the next string
-    %{tree | current: %{phase: 0, extension: 0}}
+    %{
+      tree
+      | current: %{
+          node: "root",
+          index: 0,
+          explicit: nil,
+          hash: nil,
+          phase: 0,
+          extension: 0
+        }
+    }
   end
 
   @doc """
@@ -201,11 +220,11 @@ defmodule SuffixTree do
             node: cur_nid,
             index: cur_index,
             explicit: exp_node,
+            hash: hash,
             phase: phase,
             extension: extension
           }
         } = tree,
-        hash,
         grapheme
       ) do
     tree =
@@ -245,7 +264,7 @@ defmodule SuffixTree do
     # check for equality at the new location
     # if equality is present
     tree = %{tree | current: %{extension: extension + 1}}
-    extend(tree, hash, grapheme)
+    extend(tree, grapheme)
   end
 
   @spec match_child(st(), n(), String.t()) :: nid() | nil
@@ -302,10 +321,9 @@ defmodule SuffixTree do
   # on cur_nid, change parent to new node, and change label to start at cur_index
   # on new node, add cur_nid to children (sort) - parent is already set - and set the label to {hash, phase..phase}
   # return the tree
-  @spec split_edge(st(), hash(), String.t()) :: st()
+  @spec split_edge(st(), String.t()) :: st()
   def split_edge(
-        %{current: %{node: cur_nid, index: cur_index}} = tree,
-        hash,
+        %{current: %{node: cur_nid, index: cur_index, hash: hash}} = tree,
         grapheme
       ) do
     # ...
@@ -369,7 +387,7 @@ defmodule SuffixTree do
   end
 
   def down_walk(
-        %{nodes: nodes, current: %{node: cur_nid}} = tree,
+        %{nodes: nodes, current: %{node: cur_nid}, hash: hash} = tree,
         <<grapheme::utf8, _rest::binary>> = label
       ) do
     current = nodes[cur_nid]
@@ -381,10 +399,7 @@ defmodule SuffixTree do
     tree =
       case matching_child_id do
         nil ->
-          # if you need to create a child, you need current hash and index!
-          # this map should contain label and leaves
-          # can we derive this from explicit? or do we need to pass it in?
-          # probably better to leave this out of skip_count and just use map update syntax in the calling function
+          # TODO: add label and leaves to the fields map using hash, phase, and extension
           add_child(tree, current, %{})
 
         _ ->
