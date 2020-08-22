@@ -21,7 +21,6 @@ defmodule SuffixTree do
             phase: index(),
             extension: index()
           }
-          # be sure to create the suffix link on explicit before reassigning explicit to the link target
         }
 
   @enforce_keys :id
@@ -55,6 +54,7 @@ defmodule SuffixTree do
         node: "root",
         index: 0,
         explicit: nil,
+        hash: nil,
         phase: 0,
         extension: 0
       }
@@ -77,6 +77,8 @@ defmodule SuffixTree do
 
   @doc """
   Takes a suffix tree and uses its `strings` map to build its `nodes` map. This is typically done with the nodeless tree returned by `new_tree/1`, but can also be done with an existing tree, where new strings have been added to its `strings` map, and corresponding nodes must be created. Returns an explicit suffix tree that is ready for use.
+
+  TODO: Now that we're putting `hash` into `current`, is varying the arity still the best control flow here?
   """
   @spec build_nodes(st()) :: st()
   def build_nodes(%{strings: strings} = tree) do
@@ -92,7 +94,7 @@ defmodule SuffixTree do
   def add_string(%{strings: strings} = tree, string) do
     hash = hash(string)
     strings = Map.put_new(strings, hash, string)
-    tree = %{tree | strings: strings}
+    tree = %{tree | strings: strings, current: %{hash: hash}}
     add_string(tree, hash, string)
   end
 
@@ -101,7 +103,7 @@ defmodule SuffixTree do
   end
 
   def add_string(
-        %{nodes: nodes, current: %{node: "root", phase: phase}} = tree,
+        %{nodes: nodes, current: %{node: "root", phase: phase, extension: extension}} = tree,
         hash,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
@@ -113,8 +115,7 @@ defmodule SuffixTree do
         nil ->
           add_child(tree, root, %{
             label: {hash, phase..-1},
-            # in this case leaf is 0 but in other extenstions will be extension
-            leaves: [{hash, 0}]
+            leaves: [{hash, extension}]
           })
 
         # changing exp_node on an implicit match is unique to extension 0
@@ -407,27 +408,45 @@ defmodule SuffixTree do
   end
 
   # TODO: handle leaves - actually this would be passed in `fields`.
-  # reassess whether we can rely on this function only being called in circumstances where the correct suffix link is explicit -> child
-  # are there scenarios where we create a child and don't want the link?
   @spec add_child(st(), n(), map()) :: st()
   def add_child(
-        %{nodes: nodes, current: %{explicit: explicit}} = tree,
+        %{nodes: nodes} = tree,
         %{children: children} = parent,
         fields \\ %{}
       ) do
     child = Map.merge(new_node(parent.id), fields)
     parent = %{parent | children: [child.id | children] |> Enum.sort()}
-    explicit = %{nodes[explicit] | link: child.id}
 
-    %{
+    tree = %{
       tree
       | nodes:
           Map.merge(nodes, %{
             parent.id => parent,
-            child.id => child,
-            explicit.id => explicit
+            child.id => child
           }),
-        current: %{node: child.id, index: 0, explicit: child.id}
+        current: %{node: child.id, index: 0}
+    }
+
+    link(tree)
+  end
+
+  @spec link(st()) :: st()
+  def link(%{current: %{node: cur_nid, explicit: nil}} = tree) do
+    %{tree | current: %{explicit: cur_nid}}
+  end
+
+  def link(
+        %{
+          nodes: nodes,
+          current: %{node: cur_nid, explicit: exp_nid}
+        } = tree
+      ) do
+    explicit = %{nodes[exp_nid] | link: cur_nid}
+
+    %{
+      tree
+      | nodes: %{nodes | explicit.id => explicit},
+        current: %{explicit: cur_nid}
     }
   end
 
