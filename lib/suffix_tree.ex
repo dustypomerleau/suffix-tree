@@ -87,7 +87,7 @@ defmodule SuffixTree do
       tree,
       fn {hash, string}, tree ->
         tree = %{tree | current: %{hash: hash}}
-        add_hashed_string(tree, string)
+        add_substring(tree, string)
       end
     )
   end
@@ -97,15 +97,15 @@ defmodule SuffixTree do
     hash = hash(string)
     strings = Map.put_new(strings, hash, string)
     tree = %{tree | strings: strings, current: %{hash: hash}}
-    add_hashed_string(tree, string)
+    add_substring(tree, string)
   end
 
-  @spec add_hashed_string(st(), String.t()) :: st()
-  def add_hashed_string(tree, <<>>) do
+  @spec add_substring(st(), String.t()) :: st()
+  def add_substring(tree, <<>>) do
     extend(tree, :last)
   end
 
-  def add_hashed_string(
+  def add_substring(
         %{
           nodes: nodes,
           current: %{
@@ -143,21 +143,21 @@ defmodule SuffixTree do
       end
 
     # NOTE:
-    # add_hashed_string should increment phase and reset extension before returning the tree
+    # add_substring should increment phase and reset extension before returning the tree
     # extend should update extension before returning the tree
     # extend :last should reset phase and extension before returning the tree
     # TODO: you need to add leaves as well as label
     tree = %{tree | current: %{phase: phase + 1}}
-    add_hashed_string(tree, rest)
+    add_substring(tree, rest)
   end
 
-  def add_hashed_string(
+  def add_substring(
         %{current: %{phase: phase}} = tree,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
     tree = extend(tree, <<grapheme::utf8>>)
     tree = %{tree | current: %{phase: phase + 1, extension: 0}}
-    add_hashed_string(tree, rest)
+    add_substring(tree, rest)
   end
 
   @spec extend(st(), :last) :: st()
