@@ -104,12 +104,13 @@ defmodule SuffixTree do
   def add_suffix(
         %{
           nodes: nodes,
-          current: %{
+          current:
+            %{
             node: "root",
             hash: hash,
             phase: phase,
             extension: extension
-          }
+            } = current
         } = tree,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
@@ -120,10 +121,10 @@ defmodule SuffixTree do
       case matching_child_id do
         nil ->
           add_child(tree, root, %{
+            # labels for newly created nodes start at phase, and leaves start at extension
             label: {hash, phase..-1},
-            # NOTE: the leaves also start at phase I believe, not at extension
-            # You don't need [{hash, phase} | leaves] because this is a new node
-            leaves: [{hash, phase}]
+            # You don't need [{hash, extension} | leaves] because this is a new node
+            leaves: [{hash, extension}]
           })
 
         # changing exp_node on an implicit match is unique to extension 0
@@ -132,7 +133,8 @@ defmodule SuffixTree do
           %{
             tree
             | current: %{
-                node: matching_child_id,
+                current
+                | node: matching_child_id,
                 index: 0,
                 explicit: matching_child_id
               }
@@ -140,20 +142,20 @@ defmodule SuffixTree do
       end
 
     # NOTE:
-    # add_suffix should increment phase and reset extension before returning the tree
+    # add_suffix should increment phase and reset extension (to the leaf index of explicit, or 0 if explicit is nil) before returning the tree
     # extend should update extension before returning the tree
     # extend :last should reset phase and extension before returning the tree
     # TODO: you need to add leaves as well as label
-    tree = %{tree | current: %{phase: phase + 1}}
+    tree = %{tree | current: %{current | phase: phase + 1}}
     add_suffix(tree, rest)
   end
 
   def add_suffix(
-        %{current: %{phase: phase}} = tree,
+        %{current: %{phase: phase} = current} = tree,
         <<grapheme::utf8, rest::binary>> = _string
       ) do
     tree = extend(tree, <<grapheme::utf8>>)
-    tree = %{tree | current: %{phase: phase + 1, extension: 0}}
+    tree = %{tree | current: %{current | phase: phase + 1, extension: 0}}
     add_suffix(tree, rest)
   end
 
