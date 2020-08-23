@@ -92,11 +92,11 @@ defmodule SuffixTree do
   Adds the given string to the `strings` map on the suffix tree, sets the value of the current string's hash, and then calls `add_suffix/2`, which will run recursively until all graphemes in the string are added to the tree.
   """
   @spec add_string(st(), String.t()) :: st()
-  def add_string(%{strings: strings} = tree, string) do
+  def add_string(%{strings: strings, current: current} = tree, string) do
     hash = hash(string)
     # TODO: handle collisions
     strings = Map.put_new(strings, hash, string)
-    tree = %{tree | strings: strings, current: %{hash: hash}}
+    tree = %{tree | strings: strings, current: %{current | hash: hash}}
     add_suffix(tree, string)
   end
 
