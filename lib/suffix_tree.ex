@@ -27,7 +27,7 @@ defmodule SuffixTree do
   defstruct [:id, :nodes, :strings, :current]
 
   @doc """
-  Takes a list of strings and returns a suffix tree struct for those strings, consisting of a map of tree nodes and a map of included strings.
+  Takes a list of strings and returns a suffix tree containing a map of tree nodes and a map of included strings.
   """
   @spec build_tree([String.t()]) :: st()
   def build_tree(string_list) do
@@ -35,7 +35,7 @@ defmodule SuffixTree do
   end
 
   @doc """
-  Takes a list of strings, or a map of strings in the form `%{hash => string}`, and returns a nodeless suffix tree that can be passed to `build_nodes/1` to generate a true suffix tree.
+  Takes a list of strings, or a map of `{hash, string}` pairs, and returns a nodeless suffix tree. This struct can be passed to `build_nodes/1` to generate a true suffix tree.
   """
   @spec new_tree([String.t()]) :: st()
   @spec new_tree(%{hash() => String.t()}) :: st()
@@ -66,7 +66,7 @@ defmodule SuffixTree do
   %{Murmur3F_hash => string}
   ```
 
-  The returned map is used as a lookup table during construction and use of the suffix tree, allowing `{hash, index/range}` representations of labels and leaves on each node.
+  The returned map is used as a lookup table during construction and use of the suffix tree, allowing `{hash, range}` representations of labels and `{hash, index}` representations of leaves on each node.
   """
   @spec build_strings([String.t()]) :: %{hash() => String.t()}
   def build_strings(string_list) do
@@ -74,7 +74,7 @@ defmodule SuffixTree do
   end
 
   @doc """
-  Takes a suffix tree and uses its `strings` map to build its `nodes` map. This is typically done with the nodeless tree returned by `new_tree/1`, but can also be done with an existing tree, where new strings have been added to its `strings` map, and corresponding nodes must be created. Returns an explicit suffix tree that is ready for use.
+  Takes a suffix tree and uses its `strings` map to build its `nodes` map. Returns an explicit suffix tree that is ready for use.
   """
   @spec build_nodes(st()) :: st()
   def build_nodes(%{strings: strings} = tree) do
@@ -88,14 +88,21 @@ defmodule SuffixTree do
     )
   end
 
+  @doc """
+  Adds the given string to the `strings` map on the suffix tree, sets the value of the current string's hash, and then calls `add_suffix/2`, which will run recursively until all graphemes in the string are added to the tree.
+  """
   @spec add_string(st(), String.t()) :: st()
   def add_string(%{strings: strings} = tree, string) do
     hash = hash(string)
+    # TODO: handle collisions
     strings = Map.put_new(strings, hash, string)
     tree = %{tree | strings: strings, current: %{hash: hash}}
     add_suffix(tree, string)
   end
 
+  @doc """
+  Runs recursively until all suffixes of a given string are added to the tree (either explicitly or implicitly).
+  """
   @spec add_suffix(st(), String.t()) :: st()
   def add_suffix(tree, <<>>) do
     extend(tree, :last)
@@ -106,10 +113,10 @@ defmodule SuffixTree do
           nodes: nodes,
           current:
             %{
-            node: "root",
-            hash: hash,
-            phase: phase,
-            extension: extension
+              node: "root",
+              hash: hash,
+              phase: phase,
+              extension: extension
             } = current
         } = tree,
         <<grapheme::utf8, rest::binary>> = _string
@@ -135,8 +142,8 @@ defmodule SuffixTree do
             | current: %{
                 current
                 | node: matching_child_id,
-                index: 0,
-                explicit: matching_child_id
+                  index: 0,
+                  explicit: matching_child_id
               }
           }
       end
@@ -161,19 +168,20 @@ defmodule SuffixTree do
 
   @spec extend(st(), :last) :: st()
   @spec extend(st(), String.t()) :: st()
-  def extend(tree, :last) do
+  def extend(%{current: current} = tree, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
     # must return the tree and reset the extension in prep for the next string
     %{
       tree
       | current: %{
-          node: "root",
-          index: 0,
-          explicit: nil,
-          hash: nil,
-          phase: 0,
-          extension: 0
+          current
+          | node: "root",
+            index: 0,
+            explicit: nil,
+            hash: nil,
+            phase: 0,
+            extension: 0
         }
     }
   end
@@ -189,14 +197,15 @@ defmodule SuffixTree do
         %{
           nodes: nodes,
           strings: strings,
-          current: %{
-            node: cur_nid,
-            index: cur_index,
-            explicit: exp_node,
-            hash: hash,
-            phase: phase,
-            extension: extension
-          }
+          current:
+            %{
+              node: cur_nid,
+              index: cur_index,
+              explicit: exp_node,
+              hash: hash,
+              phase: phase,
+              extension: extension
+            } = current
         } = tree,
         grapheme
       ) do
@@ -206,12 +215,12 @@ defmodule SuffixTree do
           %{current: %{node: cur_nid, index: cur_index}} = skip_count(tree)
 
         _ ->
-          current = nodes[cur_nid]
-          target_nid = nodes[current.link].id
+          cur_node = nodes[cur_nid]
+          target_nid = nodes[cur_node.link].id
 
           %{current: %{node: cur_nid, index: cur_index}} = %{
             tree
-            | current: %{node: target_nid, index: -1}
+            | current: %{current | node: target_nid, index: -1}
           }
       end
 
@@ -221,12 +230,12 @@ defmodule SuffixTree do
     # but we should only need to call skip count when we have just created a node (what other circumstance would not already have a link?)
     # so skip count needs to deal with the situation where we are one short of the desired length for the downwalk, but there is no matching child
     # every time we create a new node this will be likely (not guaranteed in a generalized tree) to happen
-    current = nodes[cur_nid]
-    cur_grapheme = get_label(tree, current, cur_index..cur_index)
+    cur_node = nodes[cur_nid]
+    cur_grapheme = get_label(tree, cur_node, cur_index..cur_index)
 
     cond do
       is_nil(cur_index) ->
-        matching_child_id = match_child(tree, current, grapheme)
+        matching_child_id = match_child(tree, cur_node, grapheme)
 
       # add the grapheme
       cur_grapheme == grapheme ->
@@ -236,7 +245,7 @@ defmodule SuffixTree do
 
     # check for equality at the new location
     # if equality is present
-    tree = %{tree | current: %{extension: extension + 1}}
+    tree = %{tree | current: %{current | extension: extension + 1}}
     extend(tree, grapheme)
   end
 
@@ -332,21 +341,24 @@ defmodule SuffixTree do
   end
 
   def up_walk(
-        %{nodes: nodes, current: %{node: cur_nid, index: cur_index}} = tree,
+        %{
+          nodes: nodes,
+          current: %{node: cur_nid, index: cur_index} = current
+        } = tree,
         label
       ) do
-    current = nodes[cur_nid]
+    cur_node = nodes[cur_nid]
 
     {tree, label} =
-      case current.link do
+      case cur_node.link do
         nil ->
-          label = get_label(tree, current, 0..cur_index) <> label
-          parent_id = nodes[current.parent].id
-          tree = %{tree | current: %{node: parent_id, index: -1}}
+          label = get_label(tree, cur_node, 0..cur_index) <> label
+          parent_id = nodes[cur_node.parent].id
+          tree = %{tree | current: %{current | node: parent_id, index: -1}}
           up_walk(tree, label)
 
         _ ->
-          tree = %{tree | current: %{node: current.link, index: -1}}
+          tree = %{tree | current: %{node: cur_node.link, index: -1}}
           {tree, label}
       end
 
@@ -360,35 +372,46 @@ defmodule SuffixTree do
   end
 
   def down_walk(
-        %{nodes: nodes, current: %{node: cur_nid}, hash: hash} = tree,
+        %{nodes: nodes, current: %{node: cur_nid, hash: hash} = current} = tree,
         <<grapheme::utf8, _rest::binary>> = label
       ) do
-    current = nodes[cur_nid]
+    cur_node = nodes[cur_nid]
 
     # correct this so that the nil case for matching child id calls add_child(tree, parent, grapheme) which should be moved into suffix_tree from node
     # that way we are returning with the necessary node already in place
-    matching_child_id = match_child(tree, current, <<grapheme::utf8>>)
+    matching_child_id = match_child(tree, cur_node, <<grapheme::utf8>>)
 
     tree =
       case matching_child_id do
         nil ->
           # TODO: add label and leaves to the fields map using hash, phase, and extension
-          add_child(tree, current, %{})
+          add_child(tree, cur_node, %{})
 
         _ ->
-          current = nodes[matching_child_id]
-          cur_len = String.length(get_label(tree, current))
+          cur_node = nodes[matching_child_id]
+          cur_len = String.length(get_label(tree, cur_node))
           label_len = String.length(label)
 
           cond do
             cur_len < label_len ->
-              tree = %{tree | current: %{node: current.id, index: -1}}
+              tree = %{
+                tree
+                | current: %{current | node: cur_node.id, index: -1}
+              }
+
               label = String.slice(label, cur_len..-1)
               down_walk(tree, label)
 
             true ->
               # subtract 1 to make the index 0-based.
-              %{tree | current: %{node: current.id, index: label_len - 1}}
+              %{
+                tree
+                | current: %{
+                    current
+                    | node: cur_node.id,
+                      index: label_len - 1
+                  }
+              }
           end
       end
 
@@ -398,7 +421,7 @@ defmodule SuffixTree do
   # TODO: handle leaves - actually this would be passed in `fields`.
   @spec add_child(st(), n(), map()) :: st()
   def add_child(
-        %{nodes: nodes} = tree,
+        %{nodes: nodes, current: current} = tree,
         %{children: children} = parent,
         fields \\ %{}
       ) do
@@ -412,21 +435,21 @@ defmodule SuffixTree do
             parent.id => parent,
             child.id => child
           }),
-        current: %{node: child.id, index: 0}
+        current: %{current | node: child.id, index: 0}
     }
 
     link(tree)
   end
 
   @spec link(st()) :: st()
-  def link(%{current: %{node: cur_nid, explicit: nil}} = tree) do
-    %{tree | current: %{explicit: cur_nid}}
+  def link(%{current: %{node: cur_nid, explicit: nil} = current} = tree) do
+    %{tree | current: %{current | explicit: cur_nid}}
   end
 
   def link(
         %{
           nodes: nodes,
-          current: %{node: cur_nid, explicit: exp_nid}
+          current: %{node: cur_nid, explicit: exp_nid} = current
         } = tree
       ) do
     explicit = %{nodes[exp_nid] | link: cur_nid}
@@ -434,7 +457,7 @@ defmodule SuffixTree do
     %{
       tree
       | nodes: %{nodes | explicit.id => explicit},
-        current: %{explicit: cur_nid}
+        current: %{current | explicit: cur_nid}
     }
   end
 
