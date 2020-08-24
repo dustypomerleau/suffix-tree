@@ -95,8 +95,12 @@ defmodule SuffixTree do
   def add_string(%{strings: strings, current: current} = tree, string) do
     hash = hash(string)
     # TODO: handle collisions
-    strings = Map.put_new(strings, hash, string)
-    tree = %{tree | strings: strings, current: %{current | hash: hash}}
+    tree = %{
+      tree
+      | strings: Map.put_new(strings, hash, string),
+        current: %{current | hash: hash}
+    }
+
     add_suffix(tree, string)
   end
 
