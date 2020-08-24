@@ -279,7 +279,6 @@ defmodule SuffixTree do
 
   @doc """
   Takes a tree and a node, and returns the label on the node. An optional subrange may be given, for returning only a portion of the label (for example, up to the current index). Returns an empty string if the label is nil, or if the subrange is outside the range of the label.
-  TODO: there is an issue here, where passing a subrange that is outside the actual range, can give you parts of the string that aren't actually in the label. For example get_label(tree, node, -1..-1) on a one-character label will still get the previous character in the string, even if that label isn't supposed to contain it. So we need a check that subrange is within the label somehow.
   """
   @spec get_label(st(), n(), Range.t()) :: String.t()
   def get_label(tree, node, subrange \\ 0..-1)
@@ -288,9 +287,12 @@ defmodule SuffixTree do
 
   def get_label(
         %{strings: strings} = _tree,
-        %{label: {hash, range_first.._range_last = range}} = _node,
+        %{label: {hash, range_first..range_last = range}} = _node,
         subrange_first..subrange_last = subrange
-      ) do
+      )
+      when subrange <= range and subrange_last <= range_last do
+    # simple but incomplete guards to keep us within the label
+    # technically, should be Nats except for 0..-1
     range =
       case subrange do
         0..-1 -> range
@@ -299,6 +301,8 @@ defmodule SuffixTree do
 
     String.slice(strings[hash], range)
   end
+
+  def get_label(_tree, _node, _subrange), do: ""
 
   # the tree has the node whose label we'll split as cur_nid
   # cur_index is where the mismatch occurred
