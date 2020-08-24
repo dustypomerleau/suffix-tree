@@ -77,12 +77,12 @@ defmodule SuffixTree do
   Takes a suffix tree and uses its `strings` map to build its `nodes` map. Returns an explicit suffix tree that is ready for use.
   """
   @spec build_nodes(st()) :: st()
-  def build_nodes(%{strings: strings} = tree) do
+  def build_nodes(%{strings: strings, current: current} = tree) do
     Enum.reduce(
       strings,
       tree,
       fn {hash, string}, tree ->
-        tree = %{tree | current: %{hash: hash}}
+        tree = %{tree | current: %{current | hash: hash}}
         add_suffix(tree, string)
       end
     )
