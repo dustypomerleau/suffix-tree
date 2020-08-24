@@ -134,8 +134,8 @@ defmodule SuffixTree do
           add_child(tree, root, %{
             # labels for newly created nodes start at phase, and leaves start at extension
             label: {hash, phase..-1},
-            # You don't need [{hash, extension} | leaves] because this is a new node
-            leaves: [{hash, extension}]
+            # You don't need leaves: %{leaves | hash => extension} because this is a new node
+            leaves: %{hash => extension}
           })
 
         # changing exp_node on an implicit match is unique to extension 0
