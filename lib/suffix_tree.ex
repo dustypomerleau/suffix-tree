@@ -430,20 +430,28 @@ defmodule SuffixTree do
   # TODO: handle leaves - actually this would be passed in `fields`.
   @spec add_child(st(), n(), map()) :: st()
   def add_child(
-        %{nodes: nodes, current: current} = tree,
+        %{
+          nodes: nodes,
+          current: %{hash: hash, phase: phase, extension: extension} = current
+        } = tree,
         %{children: children} = parent,
         fields \\ %{}
       ) do
+    fields =
+      cond do
+        map_size(fields) == 0 ->
+          %{label: {hash, phase..phase}, leaves: %{hash => extension}}
+
+        true ->
+          fields
+      end
+
     child = Map.merge(new_node(parent.id), fields)
     parent = %{parent | children: [child.id | children] |> Enum.sort()}
 
     tree = %{
       tree
-      | nodes:
-          Map.merge(nodes, %{
-            parent.id => parent,
-            child.id => child
-          }),
+      | nodes: Map.merge(nodes, %{parent.id => parent, child.id => child}),
         current: %{current | node: child.id, index: 0}
     }
 
