@@ -16,8 +16,8 @@ defmodule SuffixTree do
           current: %{
             node: nid(),
             index: index(),
-            explicit: nid(),
-            hash: hash(),
+            explicit: nid() | nil,
+            hash: hash() | nil,
             phase: index(),
             extension: index()
           }
