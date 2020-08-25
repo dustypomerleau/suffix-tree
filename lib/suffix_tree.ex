@@ -120,7 +120,8 @@ defmodule SuffixTree do
               node: "root",
               hash: hash,
               phase: phase,
-              extension: extension
+              # because of the way you implemented skip_count, I believe extension will always be 0 when node is "root"
+              extension: 0
             } = current
         } = tree,
         <<grapheme::utf8, rest::binary>> = _string
@@ -128,36 +129,26 @@ defmodule SuffixTree do
     root = nodes["root"]
     matching_child_id = match_child(tree, root, <<grapheme::utf8>>)
 
+    # consider whether this can be factored out into a generic case of `extend`
     tree =
       case matching_child_id do
         nil ->
           add_child(tree, root, %{
-            # labels for newly created nodes start at phase, and leaves start at extension
             label: {hash, phase..-1},
-            # You don't need leaves: %{leaves | hash => extension} because this is a new node
-            leaves: %{hash => extension}
+            leaves: %{hash => 0}
           })
 
-        # changing exp_node on an implicit match is unique to extension 0
-        # TODO: pattern match extension 0 instead?
         _child_id ->
-          %{
-            tree
-            | current: %{
-                current
-                | node: matching_child_id,
-                  index: 0,
-                  explicit: matching_child_id
-              }
-          }
+          %{tree | current: %{current | node: matching_child_id, index: 0}}
       end
 
     # NOTE:
-    # add_suffix should increment phase and reset extension (to the leaf index of explicit, or 0 if explicit is nil) before returning the tree
+    # add_suffix should increment phase and reset extension (to the leaf index of explicit for the current hash, or 0 if explicit is nil) before returning the tree
     # extend should update extension before returning the tree
     # extend :last should reset phase and extension before returning the tree
-    # TODO: you need to add leaves as well as label
+    # `add_child/3` has already set current.node, index, and explicit
     tree = %{tree | current: %{current | phase: phase + 1}}
+    # we jump straight to add_suffix, because phase 0 has only 1 extension
     add_suffix(tree, rest)
   end
 
