@@ -270,6 +270,9 @@ defmodule SuffixTree do
 
   @doc """
   Takes a tree and a node, and returns the label on the node. An optional subrange may be given, for returning only a portion of the label (for example, up to the current index). Returns an empty string if the label is nil, or if the subrange is outside the range of the label.
+
+  Technically these conds are nowhere near total coverage.
+  There are a lot of assumptions about the possible values that will be passed, particularly in negative ranges. But for now it is working.
   """
   @spec get_label(st(), n(), Range.t()) :: String.t()
   def get_label(tree, node, subrange \\ 0..-1)
@@ -278,22 +281,29 @@ defmodule SuffixTree do
 
   def get_label(
         %{strings: strings} = _tree,
-        %{label: {hash, range_first..range_last = range}} = _node,
+        %{label: {hash, range_first.._range_last = range}} = _node,
         subrange_first..subrange_last = subrange
-      )
-      when subrange <= range and subrange_last <= range_last do
-    # simple but incomplete guards to keep us within the label
-    # technically, should be Nats except for 0..-1
+      ) do
     range =
+      cond do
+        Enum.count(subrange) <= Enum.count(range) and subrange_first >= 0 ->
       case subrange do
-        0..-1 -> range
+            subrange_first..-1 -> (range_first + subrange_first)..-1
         _ -> (range_first + subrange_first)..(range_first + subrange_last)
       end
 
-    String.slice(strings[hash], range)
+        Enum.count(subrange) <= Enum.count(range) ->
+          subrange
+
+        true ->
+          nil
   end
 
-  def get_label(_tree, _node, _subrange), do: ""
+    case range do
+      nil -> ""
+      _ -> String.slice(strings[hash], range)
+    end
+  end
 
   # the tree has the node whose label we'll split as cur_nid
   # cur_index is where the mismatch occurred
