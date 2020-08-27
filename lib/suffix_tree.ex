@@ -27,7 +27,7 @@ defmodule SuffixTree do
   defstruct [:id, :nodes, :strings, :current]
 
   @doc """
-  Takes a list of strings and returns a suffix tree containing a map of tree nodes and a map of included strings.
+  Takes a list of strings and returns a suffix tree containing those strings.
   """
   @spec build_tree([String.t()]) :: st()
   def build_tree(string_list) do
@@ -35,7 +35,7 @@ defmodule SuffixTree do
   end
 
   @doc """
-  Takes a list of strings, or a map of `{hash, string}` pairs, and returns a nodeless suffix tree. This struct can be passed to `build_nodes/1` to generate a true suffix tree.
+  Takes a list of strings, or a map of `{hash, string}` pairs, and returns a nodeless suffix tree struct. This tree can then be passed to `build_nodes/1` to generate a true suffix tree.
   """
   @spec new_tree([String.t()]) :: st()
   @spec new_tree(%{hash() => String.t()}) :: st()
@@ -89,7 +89,7 @@ defmodule SuffixTree do
   end
 
   @doc """
-  Adds the given string to the `strings` map on the suffix tree, sets the value of the current string's hash, and then calls `add_suffix/2`, which will run recursively until all graphemes in the string are added to the tree.
+  Adds a new string to an existing suffix tree.
   """
   @spec add_string(st(), String.t()) :: st()
   def add_string(%{strings: strings, current: current} = tree, string) do
