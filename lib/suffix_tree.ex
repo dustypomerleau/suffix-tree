@@ -144,23 +144,32 @@ defmodule SuffixTree do
   # extension is complete after the extension where extension == phase
   def extend(
         %{current: %{phase: phase, extension: extension}} = tree,
+        _grapheme
+      )
+      when extension > phase do
     # set the correct values for node, index, phase, extension before moving to the next grapheme by returning in add_suffix
     # NOTE: we need to hold onto the value of extension at the time that we set explicit, because our starting point for the next phase is going to be that node (what index?) starting on that extension number
     # so set node: to exp_nid and index to... 1? and extension to exp_extension, and phase to phase + 1
     tree
+  end
 
   # leaves are determined by extension, labels are determined by phase
   def extend(
         %{
+          nodes: nodes,
+          current:
             %{
               node: cur_nid,
               index: cur_index,
-              explicit: exp_node,
-              hash: hash,
+              extension: extension
+            } = current
+        } = tree,
+        grapheme
+      ) do
     cur_node = nodes[cur_nid]
     cur_grapheme = get_label(tree, cur_node, cur_index..cur_index)
 
-              phase: phase,
+    tree =
       tree
       |> match_grapheme(cur_grapheme, grapheme)
       |> follow_link()
@@ -186,39 +195,33 @@ defmodule SuffixTree do
     matching_child_id = match_child(tree, cur_node, grapheme)
 
     case matching_child_id do
-            } = current
+      nil ->
         add_child(tree, cur_node)
-        grapheme
-      ) do
+
+      _ ->
         %{tree | current: %{current | node: matching_child_id, index: 0}}
     end
   end
-        nil ->
+
   def match_grapheme(tree, cur_grapheme, grapheme) do
     cond do
       cur_grapheme == grapheme -> tree
       true -> split_edge(tree, grapheme)
     end
-          target_nid = nodes[cur_node.link].id
+  end
 
   def follow_link(%{nodes: nodes, current: %{node: cur_nid} = current} = tree) do
-    # by definition, if there is a suffix link, we can't add to the label
-    # in the case where there is no suffix link, and we get to the target node by calling skip_count, we need to make a comparison at that location
+    cur_node = nodes[cur_nid]
+
     case cur_node.link do
       nil ->
         skip_count(tree)
-    cur_node = nodes[cur_nid]
+
       _ ->
         target_nid = nodes[cur_node.link].id
         # doublecheck whether this is the index you want after following the link
         %{tree | current: %{current | node: target_nid, index: -1}}
-        matching_child_id = match_child(tree, cur_node, grapheme)
     end
-
-    # check for equality at the new location
-    # if equality is present
-    tree = %{tree | current: %{current | extension: extension + 1}}
-    extend(tree, grapheme)
   end
 
   @spec match_child(st(), n(), String.t()) :: nid() | nil
@@ -233,11 +236,8 @@ defmodule SuffixTree do
         child = nodes[child_id]
         child_match?(tree, child, grapheme)
       end
-  Ranges like `5..-5`, while technically possible, would not work with these conds.
     )
   end
-  # perhaps refactor this to just take a single index, rather than a subrange?
-  # are there any circumstances where we want more than a grapheme but less than the full label?
 
   @doc """
   Returns a boolean, indicating whether the first grapheme in a node's label matches the given grapheme.
@@ -253,8 +253,11 @@ defmodule SuffixTree do
 
   Technically these conds are nowhere near total coverage.
   There are a lot of assumptions about the possible values that will be passed, particularly in negative ranges. But for now it is working.
+  Ranges like `5..-5`, while technically possible, would not work with these conds.
   """
   @spec get_label(st(), n(), Range.t()) :: String.t()
+  # perhaps refactor this to just take a single index, rather than a subrange?
+  # are there any circumstances where we want more than a grapheme but less than the full label?
   def get_label(tree, node, subrange \\ 0..-1)
 
   def get_label(_tree, %{label: nil} = _node, _subrange), do: ""
@@ -267,19 +270,17 @@ defmodule SuffixTree do
     range =
       cond do
         Enum.count(subrange) <= Enum.count(range) and subrange_first >= 0 ->
-  # call add_child on nodes[nodes[cur_nid].parent]
-  # capture the id of the new child node you create
-  # on the parent, remove cur_nid from children
-  # reassess:
-        _ -> (range_first + subrange_first)..(range_first + subrange_last)
-      end
+          case subrange do
+            subrange_first..-1 -> (range_first + subrange_first)..-1
+            _ -> (range_first + subrange_first)..(range_first + subrange_last)
+          end
 
         Enum.count(subrange) <= Enum.count(range) ->
           subrange
 
         true ->
           nil
-    # ... end of index 0 of the new node
+      end
 
     case range do
       nil -> ""
@@ -289,8 +290,10 @@ defmodule SuffixTree do
 
   # the tree has the node whose label we'll split as cur_nid
   # cur_index is where the mismatch occurred
-  # first call new_node() and make the parent the same as cur_nid
-  # on the parent, remove cur_nid from children and add new node to children (sort)
+  # call add_child on nodes[nodes[cur_nid].parent]
+  # capture the id of the new child node you create
+  # on the parent, remove cur_nid from children
+  # reassess:
   # on cur_nid, change parent to new node, and change label to start at cur_index
   # on new node, add cur_nid to children (sort) - parent is already set - and set the label to {hash, phase..phase}
   # return the tree
@@ -299,7 +302,7 @@ defmodule SuffixTree do
         %{current: %{node: cur_nid, index: cur_index, hash: hash}} = tree,
         grapheme
       ) do
-    # ...
+    # ... end of index 0 of the new node
     tree
   end
 
@@ -341,16 +344,20 @@ defmodule SuffixTree do
     cur_node = nodes[cur_nid]
 
     {tree, label} =
-        %{nodes: nodes, current: %{node: cur_nid} = current} = tree,
+      case cur_node.link do
         nil ->
           label = get_label(tree, cur_node, 0..cur_index) <> label
           parent_id = nodes[cur_node.parent].id
+          tree = %{tree | current: %{current | node: parent_id, index: -1}}
+          up_walk(tree, label)
+
         _ ->
           tree = %{tree | current: %{node: cur_node.link, index: -1}}
           {tree, label}
       end
 
-          add_child(tree, cur_node)
+    {tree, label}
+  end
 
   @spec down_walk(st(), String.t()) :: st()
   def down_walk(tree, <<>>) do
@@ -359,18 +366,19 @@ defmodule SuffixTree do
   end
 
   def down_walk(
-        %{nodes: nodes, current: %{node: cur_nid, hash: hash} = current} = tree,
+        %{nodes: nodes, current: %{node: cur_nid} = current} = tree,
         <<grapheme::utf8, _rest::binary>> = label
       ) do
     cur_node = nodes[cur_nid]
-
-    # correct this so that the nil case for matching child id calls add_child(tree, parent, grapheme) which should be moved into suffix_tree from node
-    # that way we are returning with the necessary node already in place
     matching_child_id = match_child(tree, cur_node, <<grapheme::utf8>>)
 
+    tree =
       case matching_child_id do
         nil ->
-                | current: %{current | node: cur_node.id, index: label_len - 1}
+          add_child(tree, cur_node)
+
+        _ ->
+          cur_node = nodes[matching_child_id]
           cur_len = String.length(get_label(tree, cur_node))
           label_len = String.length(label)
 
@@ -378,20 +386,16 @@ defmodule SuffixTree do
             cur_len < label_len ->
               tree = %{
                 tree
+                | current: %{current | node: cur_node.id, index: -1}
               }
 
               label = String.slice(label, cur_len..-1)
               down_walk(tree, label)
 
             true ->
-              # subtract 1 to make the index 0-based.
               %{
                 tree
-                | current: %{
-                    current
-                    | node: cur_node.id,
-                      index: label_len - 1
-                  }
+                | current: %{current | node: cur_node.id, index: label_len - 1}
               }
           end
       end
@@ -399,7 +403,6 @@ defmodule SuffixTree do
     tree
   end
 
-  # TODO: handle leaves - actually this would be passed in `fields`.
   @spec add_child(st(), n(), map()) :: st()
   def add_child(
         %{
