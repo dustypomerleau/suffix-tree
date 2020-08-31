@@ -341,20 +341,16 @@ defmodule SuffixTree do
     cur_node = nodes[cur_nid]
 
     {tree, label} =
-      case cur_node.link do
+        %{nodes: nodes, current: %{node: cur_nid} = current} = tree,
         nil ->
           label = get_label(tree, cur_node, 0..cur_index) <> label
           parent_id = nodes[cur_node.parent].id
-          tree = %{tree | current: %{current | node: parent_id, index: -1}}
-          up_walk(tree, label)
-
         _ ->
           tree = %{tree | current: %{node: cur_node.link, index: -1}}
           {tree, label}
       end
 
-    {tree, label}
-  end
+          add_child(tree, cur_node)
 
   @spec down_walk(st(), String.t()) :: st()
   def down_walk(tree, <<>>) do
@@ -372,14 +368,9 @@ defmodule SuffixTree do
     # that way we are returning with the necessary node already in place
     matching_child_id = match_child(tree, cur_node, <<grapheme::utf8>>)
 
-    tree =
       case matching_child_id do
         nil ->
-          # TODO: add label and leaves to the fields map using hash, phase, and extension
-          add_child(tree, cur_node, %{})
-
-        _ ->
-          cur_node = nodes[matching_child_id]
+                | current: %{current | node: cur_node.id, index: label_len - 1}
           cur_len = String.length(get_label(tree, cur_node))
           label_len = String.length(label)
 
@@ -387,7 +378,6 @@ defmodule SuffixTree do
             cur_len < label_len ->
               tree = %{
                 tree
-                | current: %{current | node: cur_node.id, index: -1}
               }
 
               label = String.slice(label, cur_len..-1)
