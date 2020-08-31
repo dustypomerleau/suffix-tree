@@ -267,8 +267,10 @@ defmodule SuffixTree do
     range =
       cond do
         Enum.count(subrange) <= Enum.count(range) and subrange_first >= 0 ->
-      case subrange do
-            subrange_first..-1 -> (range_first + subrange_first)..-1
+  # call add_child on nodes[nodes[cur_nid].parent]
+  # capture the id of the new child node you create
+  # on the parent, remove cur_nid from children
+  # reassess:
         _ -> (range_first + subrange_first)..(range_first + subrange_last)
       end
 
@@ -277,7 +279,7 @@ defmodule SuffixTree do
 
         true ->
           nil
-  end
+    # ... end of index 0 of the new node
 
     case range do
       nil -> ""
