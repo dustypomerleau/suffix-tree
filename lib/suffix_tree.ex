@@ -233,8 +233,11 @@ defmodule SuffixTree do
         child = nodes[child_id]
         child_match?(tree, child, grapheme)
       end
+  Ranges like `5..-5`, while technically possible, would not work with these conds.
     )
   end
+  # perhaps refactor this to just take a single index, rather than a subrange?
+  # are there any circumstances where we want more than a grapheme but less than the full label?
 
   @doc """
   Returns a boolean, indicating whether the first grapheme in a node's label matches the given grapheme.
