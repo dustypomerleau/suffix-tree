@@ -144,64 +144,75 @@ defmodule SuffixTree do
   # extension is complete after the extension where extension == phase
   def extend(
         %{current: %{phase: phase, extension: extension}} = tree,
-        _grapheme
-      )
-      when extension > phase do
     # set the correct values for node, index, phase, extension before moving to the next grapheme by returning in add_suffix
     # NOTE: we need to hold onto the value of extension at the time that we set explicit, because our starting point for the next phase is going to be that node (what index?) starting on that extension number
     # so set node: to exp_nid and index to... 1? and extension to exp_extension, and phase to phase + 1
     tree
-  end
 
   # leaves are determined by extension, labels are determined by phase
   def extend(
         %{
-          nodes: nodes,
-          strings: strings,
-          current:
             %{
               node: cur_nid,
               index: cur_index,
               explicit: exp_node,
               hash: hash,
-              phase: phase,
-              extension: extension
-            } = current
-        } = tree,
-        grapheme
-      ) do
-    tree =
-      case nodes[cur_nid].link do
-        nil ->
-          %{current: %{node: cur_nid, index: cur_index}} = skip_count(tree)
-
-        _ ->
-          cur_node = nodes[cur_nid]
-          target_nid = nodes[cur_node.link].id
-
-          %{current: %{node: cur_nid, index: cur_index}} = %{
-            tree
-            | current: %{current | node: target_nid, index: -1}
-          }
-      end
-
-    # by definition, if there is a suffix link, we can't add to the label
-    # so either there is a matching child or we add a child, full stop
-    # in the case where there is no suffix link, and we get to the target node by calling skip_count, we need to make a comparison at that location
-    # but we should only need to call skip count when we have just created a node (what other circumstance would not already have a link?)
-    # so skip count needs to deal with the situation where we are one short of the desired length for the downwalk, but there is no matching child
-    # every time we create a new node this will be likely (not guaranteed in a generalized tree) to happen
     cur_node = nodes[cur_nid]
     cur_grapheme = get_label(tree, cur_node, cur_index..cur_index)
 
-    cond do
-      is_nil(cur_index) ->
-        matching_child_id = match_child(tree, cur_node, grapheme)
+              phase: phase,
+      tree
+      |> match_grapheme(cur_grapheme, grapheme)
+      |> follow_link()
 
-      # add the grapheme
-      cur_grapheme == grapheme ->
-        nil
-        # return
+    tree = %{
+      tree
+      | current: %{
+          current
+          | index: cur_index + 1,
+            extension: extension + 1
+        }
+    }
+
+    extend(tree, grapheme)
+  end
+
+  @spec match_grapheme(st(), String.t(), String.t()) :: st()
+  def match_grapheme(
+        %{current: %{node: cur_node} = current} = tree,
+        <<>>,
+        grapheme
+      ) do
+    matching_child_id = match_child(tree, cur_node, grapheme)
+
+    case matching_child_id do
+            } = current
+        add_child(tree, cur_node)
+        grapheme
+      ) do
+        %{tree | current: %{current | node: matching_child_id, index: 0}}
+    end
+  end
+        nil ->
+  def match_grapheme(tree, cur_grapheme, grapheme) do
+    cond do
+      cur_grapheme == grapheme -> tree
+      true -> split_edge(tree, grapheme)
+    end
+          target_nid = nodes[cur_node.link].id
+
+  def follow_link(%{nodes: nodes, current: %{node: cur_nid} = current} = tree) do
+    # by definition, if there is a suffix link, we can't add to the label
+    # in the case where there is no suffix link, and we get to the target node by calling skip_count, we need to make a comparison at that location
+    case cur_node.link do
+      nil ->
+        skip_count(tree)
+    cur_node = nodes[cur_nid]
+      _ ->
+        target_nid = nodes[cur_node.link].id
+        # doublecheck whether this is the index you want after following the link
+        %{tree | current: %{current | node: target_nid, index: -1}}
+        matching_child_id = match_child(tree, cur_node, grapheme)
     end
 
     # check for equality at the new location
