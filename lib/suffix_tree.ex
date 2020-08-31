@@ -141,12 +141,18 @@ defmodule SuffixTree do
     }
   end
 
-  @doc """
-  fakedoc
+  # extension is complete after the extension where extension == phase
+  def extend(
+        %{current: %{phase: phase, extension: extension}} = tree,
+        _grapheme
+      )
+      when extension > phase do
+    # set the correct values for node, index, phase, extension before moving to the next grapheme by returning in add_suffix
+    # NOTE: we need to hold onto the value of extension at the time that we set explicit, because our starting point for the next phase is going to be that node (what index?) starting on that extension number
+    # so set node: to exp_nid and index to... 1? and extension to exp_extension, and phase to phase + 1
+    tree
+  end
 
-
-  """
-  # extend is complete when extension == phase
   # leaves are determined by extension, labels are determined by phase
   def extend(
         %{
