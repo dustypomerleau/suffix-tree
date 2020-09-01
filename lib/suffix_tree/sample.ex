@@ -1,14 +1,15 @@
 defmodule SuffixTree.Sample do
   def sample() do
     %SuffixTree{
-      id: "WqFqgrpY2xPtZjoVhYnbgQ",
       current: %{
-        node: "root",
+        extension: 0,
+        hash: nil,
         index: 0,
-        explicit: nil,
-        phase: 0,
-        extension: 0
+        node: "root",
+        phase: 0
       },
+      explicit: nil,
+      id: "WqFqgrpY2xPtZjoVhYnbgQ",
       nodes: %{
         # nd (nd)
         "4rQYWUSp2K7Ld0A6ykFmlA" => %SuffixTree.Node{
