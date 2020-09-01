@@ -41,12 +41,6 @@ defmodule SuffixTree.Node do
     Enum.empty?(children)
   end
 
-  @spec remove_child(n(), nid()) :: n()
-  def remove_child(%{children: children} = parent, child_id) do
-    children = List.delete(children, child_id)
-    %{parent | children: children}
-  end
-
   @spec add_label(n(), hash(), Range.t()) :: n()
   def add_label(node, hash, range) do
     %{node | label: {hash, range}}
