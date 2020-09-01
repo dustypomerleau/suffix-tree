@@ -365,8 +365,8 @@ defmodule SuffixTree do
         label: {label_hash, (first + cur_index)..last}
     }
 
-    %{nodes: nodes} = tree = add_child(tree, nodes[cur_nid])
-    %{tree | nodes: %{nodes | downstream.id => downstream}}
+    tree = %{tree | nodes: %{nodes | downstream.id => downstream}}
+    add_child(tree, nodes[cur_nid])
   end
 
   @doc """
