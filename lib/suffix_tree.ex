@@ -233,6 +233,7 @@ defmodule SuffixTree do
     end
   end
 
+  @spec follow_link(st()) :: st()
   def follow_link(
         %{
           nodes: nodes,
