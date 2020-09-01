@@ -16,15 +16,15 @@ defmodule SuffixTree do
           current: %{
             node: nid(),
             index: index(),
-            explicit: nid() | nil,
             hash: hash() | nil,
             phase: index(),
             extension: index()
-          }
+          },
+          explicit: %{node: nid(), extension: index()} | nil
         }
 
   @enforce_keys :id
-  defstruct [:id, :nodes, :strings, :current]
+  defstruct [:id, :nodes, :strings, :current, :explicit]
 
   @doc """
   Takes a list of strings and returns a suffix tree containing those strings.
@@ -51,11 +51,11 @@ defmodule SuffixTree do
       current: %{
         node: "root",
         index: 0,
-        explicit: nil,
         hash: nil,
         phase: 0,
         extension: 0
-      }
+      },
+      explicit: nil
     }
   end
 
@@ -133,11 +133,11 @@ defmodule SuffixTree do
           current
           | node: "root",
             index: 0,
-            explicit: nil,
             hash: nil,
             phase: 0,
             extension: 0
-        }
+        },
+        explicit: nil
     }
   end
 
@@ -434,14 +434,20 @@ defmodule SuffixTree do
   end
 
   @spec link(st()) :: st()
-  def link(%{current: %{node: cur_nid, explicit: nil} = current} = tree) do
-    %{tree | current: %{current | explicit: cur_nid}}
+  def link(
+        %{
+          current: %{node: cur_nid, extension: extension},
+          explicit: nil
+        } = tree
+      ) do
+    %{tree | explicit: %{node: cur_nid, extension: extension}}
   end
 
   def link(
         %{
           nodes: nodes,
-          current: %{node: cur_nid, explicit: exp_nid} = current
+          current: %{node: cur_nid, extension: extension},
+          explicit: %{node: exp_nid}
         } = tree
       ) do
     explicit = %{nodes[exp_nid] | link: cur_nid}
@@ -449,7 +455,7 @@ defmodule SuffixTree do
     %{
       tree
       | nodes: %{nodes | explicit.id => explicit},
-        current: %{current | explicit: cur_nid}
+        explicit: %{node: cur_nid, extension: extension}
     }
   end
 
