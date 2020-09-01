@@ -233,7 +233,12 @@ defmodule SuffixTree do
     end
   end
 
-  def follow_link(%{nodes: nodes, current: %{node: cur_nid} = current} = tree) do
+  def follow_link(
+        %{
+          nodes: nodes,
+          current: %{node: cur_nid} = current
+        } = tree
+      ) do
     cur_node = nodes[cur_nid]
 
     case cur_node.link do
