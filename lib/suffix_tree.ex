@@ -229,7 +229,7 @@ defmodule SuffixTree do
   def match_grapheme(tree, cur_grapheme, grapheme) do
     cond do
       cur_grapheme == grapheme -> tree
-      true -> split_edge(tree, grapheme)
+      true -> split_edge(tree)
     end
   end
 
@@ -326,13 +326,47 @@ defmodule SuffixTree do
   # on cur_nid, change parent to new node, and change label to start at cur_index
   # on new node, add cur_nid to children (sort) - parent is already set - and set the label to {hash, phase..phase}
   # return the tree
-  @spec split_edge(st(), String.t()) :: st()
+  # this isn't so simple
+  # we need to create 2 nodes to split the edge
+  # one of them has the label up to one short of the current index
+  #
+  @spec split_edge(st()) :: st()
   def split_edge(
-        %{current: %{node: cur_nid, index: cur_index, hash: hash}} = tree,
-        grapheme
+        %{
+          nodes: nodes,
+          current: %{
+            node: cur_nid,
+            index: cur_index,
+            hash: cur_hash,
+            extension: extension
+          }
+        } = tree
       ) do
-    # ... end of index 0 of the new node
-    tree
+    %{label: {label_hash, first..last}} = downstream = nodes[cur_nid]
+    parent = nodes[downstream.parent]
+
+    tree =
+      tree
+      |> remove_child(parent, downstream.id)
+      |> add_child(
+        parent,
+        %{
+          label: {label_hash, first..(first + cur_index - 1)},
+          leaves: %{cur_hash => extension},
+          children: [downstream.id]
+        }
+      )
+
+    %{nodes: nodes, current: %{node: cur_nid}} = tree
+
+    downstream = %{
+      downstream
+      | parent: cur_nid,
+        label: {label_hash, (first + cur_index)..last}
+    }
+
+    %{nodes: nodes} = tree = add_child(tree, nodes[cur_nid])
+    %{tree | nodes: %{nodes | downstream.id => downstream}}
   end
 
   @doc """
@@ -358,8 +392,12 @@ defmodule SuffixTree do
   def up_walk(tree, label \\ "")
 
   def up_walk(%{current: %{node: "root"}} = tree, label) do
-    # TODO: handle the case of empty string, as this will be a match error
-    <<_first::utf8, label::binary>> = label
+    label =
+      case label do
+        <<>> -> label
+        <<_first::utf8, rest::binary>> -> rest
+      end
+
     {tree, label}
   end
 
@@ -444,7 +482,7 @@ defmodule SuffixTree do
     fields =
       cond do
         map_size(fields) == 0 ->
-          %{label: {hash, phase..phase}, leaves: %{hash => extension}}
+          %{label: {hash, phase..-1}, leaves: %{hash => extension}}
 
         true ->
           fields
@@ -486,6 +524,17 @@ defmodule SuffixTree do
       | nodes: %{nodes | explicit.id => explicit},
         explicit: %{node: cur_nid, extension: extension}
     }
+  end
+
+  @spec remove_child(st(), n(), nid()) :: n()
+  def remove_child(
+        %{nodes: nodes} = tree,
+        %{children: children} = parent,
+        child_id
+      ) do
+    children = List.delete(children, child_id)
+    parent = %{parent | children: children}
+    %{tree | nodes: %{nodes | parent.id => parent}}
   end
 
   def remove_node(tree, node) do
