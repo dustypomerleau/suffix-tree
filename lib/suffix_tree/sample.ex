@@ -2,11 +2,11 @@ defmodule SuffixTree.Sample do
   def sample() do
     %SuffixTree{
       current: %{
-        extension: 0,
-        hash: nil,
-        index: 0,
         node: "root",
-        phase: 0
+        index: 0,
+        hash: nil,
+        phase: 0,
+        extension: 0
       },
       explicit: nil,
       id: "WqFqgrpY2xPtZjoVhYnbgQ",
