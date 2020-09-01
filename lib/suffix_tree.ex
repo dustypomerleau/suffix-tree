@@ -123,19 +123,24 @@ defmodule SuffixTree do
 
   @spec extend(st(), :last) :: st()
   @spec extend(st(), String.t()) :: st()
-  def extend(%{current: current} = tree, :last) do
+  def extend(tree, :last) do
     # faux extend the suffix tree by :last
     # in order to convert the implicit tree to an explicit one
     # must return the tree and reset the extension in prep for the next string
+    # approach:
+    # we know that :last will never match a grapheme, so we aren't comparing graphemes at all
+    # instead we simply need to note whether a grapheme is present at our current position
+    # if a grapheme is present, split the label, and add a leaf to the new node (which will have a label of "", perhaps best represented by running off the end of the current string (for example, if the string is "string", then we could have a label of {hash("string"), 6..6}))
+    # if the empty string is present instead of a grapheme, then we know we're at the end of the label and nothing needs to be done
+
     %{
       tree
       | current: %{
-          current
-          | node: "root",
-            index: 0,
-            hash: nil,
-            phase: 0,
-            extension: 0
+          node: "root",
+          index: 0,
+          hash: nil,
+          phase: 0,
+          extension: 0
         },
         explicit: nil
     }
@@ -143,14 +148,32 @@ defmodule SuffixTree do
 
   # extension is complete after the extension where extension == phase
   def extend(
-        %{current: %{phase: phase, extension: extension}} = tree,
+        %{
+          current: %{phase: phase, extension: extension} = current,
+          explicit: %{node: exp_nid, extension: exp_ext}
+        } = tree,
         _grapheme
       )
       when extension > phase do
-    # set the correct values for node, index, phase, extension before moving to the next grapheme by returning in add_suffix
+    %{
+      tree
+      | current: %{
+          current
+          | node: exp_nid,
+            index: 1,
+            phase: phase + 1,
+            extension: exp_ext
+        }
+    }
+
+    # The logic about index is this:
+    # given our approach to labels, where we add the string to -1 at the time of node creation, then by definition the only explicit addition happens at index 0 on each node.
+    # So that begs the question of whether we need to return to that node at all, since we are then sure we can implicitly add the next grapheme (since the value of explicit is always set for the string in question, and would be reset to `nil` before starting a new string)
+    # but we need to still start from this node in order to perform skip_count, if it is the case that the node has no suffix link (which, by definition, if it is the most recently created node, then it will not)
+    # so I propose we set the index to -1 on explicit, and capture the node's entire label if we need to skip count
+    # the problem with that approach is that the grapheme you are currently up to is not the grapheme at -1, it's the grapheme at 1
+    # but that assumes that explicit happened on the most recent phase, is it possible it didn't? think about this - in the meantime start from index 1
     # NOTE: we need to hold onto the value of extension at the time that we set explicit, because our starting point for the next phase is going to be that node (what index?) starting on that extension number
-    # so set node: to exp_nid and index to... 1? and extension to exp_extension, and phase to phase + 1
-    tree
   end
 
   # leaves are determined by extension, labels are determined by phase
