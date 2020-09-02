@@ -543,22 +543,19 @@ defmodule SuffixTree do
     %{tree | nodes: %{nodes | parent.id => parent}}
   end
 
-  def remove_node(tree, node) do
-    # remove the node
-    tree
-  end
+  # @spec remove_string(st(), String.t()) :: st()
+  # def remove_string(tree, string) do
+  #   # removing a string from the tree may be as simple as
+  #   # * iterate through each node
+  #   # * delete the hash from leaves
+  #   # * check for the hash on label
+  #   # * if the hash is present on label, use another hash in leaves to create a new label
+  #   # * if no other hash is present in leaves, you need to prepend the node's label to the children of the node (checking and adjusting ranges) and adjust the parent of the children to the node's parent before deleting it
+  #   # * delete the string from `strings`
+  #   tree
+  # end
 
-  def remove_string(tree, string) do
-    # removing a string from the tree may be as simple as
-    # * iterate through each node
-    # * delete the hash from leaves
-    # * check for the hash on label
-    # * if the hash is present on label, use another hash in leaves to create a new label
-    # * if no other hash is present in leaves, you need to prepend the node's label to the children of the node (checking and adjusting ranges) and adjust the parent of the children to the node's parent before deleting it
-    # * delete the string from `strings`
-    tree
-  end
-
+  @spec hash(String.t()) :: integer()
   def hash(string) do
     Murmur.hash_x86_128(string)
   end
