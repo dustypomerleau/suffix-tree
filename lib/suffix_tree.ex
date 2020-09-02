@@ -532,7 +532,7 @@ defmodule SuffixTree do
     }
   end
 
-  @spec remove_child(st(), n(), nid()) :: n()
+  @spec remove_child(st(), n(), nid()) :: st()
   def remove_child(
         %{nodes: nodes} = tree,
         %{children: children} = parent,
