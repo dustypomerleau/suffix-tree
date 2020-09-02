@@ -287,25 +287,31 @@ defmodule SuffixTree do
   @spec get_label(st(), n(), Range.t()) :: String.t()
   # perhaps refactor this to just take a single index, rather than a subrange?
   # are there any circumstances where we want more than a grapheme but less than the full label?
+  # another option is to refactor so that there are 3 variants (in this order)
+  # get_label/2 which returns the whole label
+  # get_label/3 that takes a range
+  # get_label/3 that takes an index and returns just that grapheme
+  # a last option would be to have a separate get_grapheme/3 function and leave this one untouched
   def get_label(tree, node, subrange \\ 0..-1)
 
   def get_label(_tree, %{label: nil} = _node, _subrange), do: ""
 
   def get_label(
         %{strings: strings} = _tree,
-        %{label: {hash, range_first.._range_last = range}} = _node,
+        %{label: {hash, range_first..range_last = range}} = _node,
         subrange_first..subrange_last = subrange
       ) do
     range =
       cond do
         Enum.count(subrange) <= Enum.count(range) and subrange_first >= 0 ->
           case subrange do
-            subrange_first..-1 -> (range_first + subrange_first)..-1
+            subrange_first..-1 -> (range_first + subrange_first)..range_last
             _ -> (range_first + subrange_first)..(range_first + subrange_last)
           end
 
+        # This code will not fly, because range_last can be -1
         Enum.count(subrange) <= Enum.count(range) ->
-          subrange
+          (range_last + subrange_first + 1)..(range_last + subrange_last + 1)
 
         true ->
           nil
@@ -314,6 +320,21 @@ defmodule SuffixTree do
     case range do
       nil -> ""
       _ -> String.slice(strings[hash], range)
+    end
+  end
+
+  @spec get_grapheme(st(), n(), index()) :: String.t()
+  def get_grapheme(
+        %{strings: strings} = _tree,
+        %{label: {hash, first..last}} = _node,
+        index
+      )
+      when first + index <= first + last do
+    grapheme = String.at(strings[hash], first + index)
+
+    case grapheme do
+      nil -> ""
+      _ -> grapheme
     end
   end
 
