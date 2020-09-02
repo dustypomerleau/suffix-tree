@@ -278,63 +278,45 @@ defmodule SuffixTree do
   end
 
   @doc """
-  Takes a tree and a node, and returns the label on the node. An optional subrange may be given, for returning only a portion of the label (for example, up to the current index). Returns an empty string if the label is nil, or if the subrange is outside the range of the label.
-
-  Technically these conds are nowhere near total coverage.
-  There are a lot of assumptions about the possible values that will be passed, particularly in negative ranges. But for now it is working.
-  Ranges like `5..-5`, while technically possible, would not work with these conds.
+  Takes a tree and a node, and returns the label on the node. An optional index may be given, for returning the grapheme at a particular position on the label. Returns an empty string if the label is nil, or if the index is outside the range of the label.
   """
-  @spec get_label(st(), n(), Range.t()) :: String.t()
-  # perhaps refactor this to just take a single index, rather than a subrange?
-  # are there any circumstances where we want more than a grapheme but less than the full label?
-  # another option is to refactor so that there are 3 variants (in this order)
-  # get_label/2 which returns the whole label
-  # get_label/3 that takes a range
-  # get_label/3 that takes an index and returns just that grapheme
-  # a last option would be to have a separate get_grapheme/3 function and leave this one untouched
-  def get_label(tree, node, subrange \\ 0..-1)
+  @spec get_label(st(), n()) :: String.t()
+  @spec get_label(st(), n(), index()) :: String.t()
+  def get_label(_tree, %{label: nil} = _node), do: ""
 
-  def get_label(_tree, %{label: nil} = _node, _subrange), do: ""
+  def get_label(%{strings: strings} = _tree, %{label: {hash, range}} = _node) do
+    String.slice(strings[hash], range)
+  end
 
   def get_label(
         %{strings: strings} = _tree,
-        %{label: {hash, range_first..range_last = range}} = _node,
-        subrange_first..subrange_last = subrange
-      ) do
-    range =
-      cond do
-        Enum.count(subrange) <= Enum.count(range) and subrange_first >= 0 ->
-          case subrange do
-            subrange_first..-1 -> (range_first + subrange_first)..range_last
-            _ -> (range_first + subrange_first)..(range_first + subrange_last)
-          end
+        %{label: {hash, first.._last = range}} = _node,
+        index
+      )
+      when index >= 0 do
+    cond do
+      index <= Enum.count(range) - 1 ->
+        String.at(strings[hash], first + index)
 
-        # This code will not fly, because range_last can be -1
-        Enum.count(subrange) <= Enum.count(range) ->
-          (range_last + subrange_first + 1)..(range_last + subrange_last + 1)
-
-        true ->
-          nil
-      end
-
-    case range do
-      nil -> ""
-      _ -> String.slice(strings[hash], range)
+      true ->
+        ""
     end
   end
 
-  @spec get_grapheme(st(), n(), index()) :: String.t()
-  def get_grapheme(
+  def get_label(
         %{strings: strings} = _tree,
-        %{label: {hash, first..last}} = _node,
+        %{label: {hash, _first..last = range}} = _node,
         index
       )
-      when first + index <= first + last do
-    grapheme = String.at(strings[hash], first + index)
+      when index < 0 do
+    label = String.slice(strings[hash], range)
 
-    case grapheme do
-      nil -> ""
-      _ -> grapheme
+    cond do
+      abs(index) <= String.length(label) ->
+        String.at(label, last + index + 1)
+
+      true ->
+        ""
     end
   end
 
