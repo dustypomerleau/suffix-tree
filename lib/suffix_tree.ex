@@ -190,7 +190,7 @@ defmodule SuffixTree do
         grapheme
       ) do
     cur_node = nodes[cur_nid]
-    cur_grapheme = get_label(tree, cur_node, cur_index..cur_index)
+    cur_grapheme = get_label(tree, cur_node, cur_index)
 
     tree =
       tree
@@ -273,7 +273,7 @@ defmodule SuffixTree do
   """
   @spec child_match?(st(), n(), String.t()) :: boolean()
   def child_match?(tree, node, grapheme) do
-    first = get_label(tree, node, 0..0)
+    first = get_label(tree, node, 0)
     first == grapheme
   end
 
@@ -287,6 +287,8 @@ defmodule SuffixTree do
   def get_label(%{strings: strings} = _tree, %{label: {hash, range}} = _node) do
     String.slice(strings[hash], range)
   end
+
+  def get_label(_tree, %{label: nil} = _node, _index), do: ""
 
   def get_label(
         %{strings: strings} = _tree,
