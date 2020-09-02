@@ -1,5 +1,6 @@
 defmodule SuffixTree do
   @moduledoc false
+  # consider refactoring all functions that take a `n()` to take a `nid()`
 
   import SuffixTree.Node
 
@@ -112,15 +113,13 @@ defmodule SuffixTree do
     extend(tree, :last)
   end
 
-  def add_suffix(
-        %{current: %{phase: phase} = current} = tree,
-        <<grapheme::utf8, rest::binary>> = _string
-      ) do
+  def add_suffix(tree, <<grapheme::utf8, rest::binary>> = _string) do
     tree = extend(tree, <<grapheme::utf8>>)
-    tree = %{tree | current: %{current | phase: phase + 1, extension: 0}}
     add_suffix(tree, rest)
   end
 
+  # you still haven't adequately addressed that rule 3 is a showstopper
+  # when the grapheme matches you have to end the phase
   @spec extend(st(), :last) :: st()
   @spec extend(st(), String.t()) :: st()
   def extend(tree, :last) do
@@ -147,6 +146,9 @@ defmodule SuffixTree do
   end
 
   # extension is complete after the extension where extension == phase
+  # we have an issue here because we are incrementing phase twice
+  # you increment phase here, but then you are incrementing it again in add_suffix after extend returns
+  # makes more sense to do it here, I think
   def extend(
         %{
           current: %{phase: phase, extension: extension} = current,
@@ -195,6 +197,7 @@ defmodule SuffixTree do
     tree =
       tree
       |> match_grapheme(cur_grapheme, grapheme)
+      # problem is right here - you can't follow the link if match_grapheme invokes rule 3, instead you have to start the next phase from the last explicit extension
       |> follow_link()
 
     tree = %{
@@ -249,6 +252,7 @@ defmodule SuffixTree do
       _ ->
         target_nid = nodes[cur_node.link].id
         # doublecheck whether this is the index you want after following the link
+        # under what circumstances would you need to follow the link?
         %{tree | current: %{current | node: target_nid, index: -1}}
     end
   end
