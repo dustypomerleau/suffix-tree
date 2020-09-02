@@ -418,7 +418,8 @@ defmodule SuffixTree do
     {tree, label} =
       case cur_node.link do
         nil ->
-          label = get_label(tree, cur_node, 0..cur_index) <> label
+          cur_label = get_label(tree, cur_node)
+          label = String.slice(cur_label, 0..cur_index) <> label
           parent_id = nodes[cur_node.parent].id
           tree = %{tree | current: %{current | node: parent_id, index: -1}}
           up_walk(tree, label)
