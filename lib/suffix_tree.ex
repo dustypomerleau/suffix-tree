@@ -4,8 +4,8 @@ defmodule SuffixTree do
 
   import SuffixTree.Node
 
-  @type hash :: integer()
-  @type index :: integer()
+  @type hash :: non_neg_integer()
+  @type index :: non_neg_integer()
   @type n :: SuffixTree.Node.n()
   @type nid :: SuffixTree.Node.nid()
   @type stid :: String.t()
@@ -149,6 +149,7 @@ defmodule SuffixTree do
   # we have an issue here because we are incrementing phase twice
   # you increment phase here, but then you are incrementing it again in add_suffix after extend returns
   # makes more sense to do it here, I think
+  # TODO: review all cases where a node is created and make sure you are setting the values for explicit
   def extend(
         %{
           current: %{phase: phase, extension: extension} = current,
@@ -559,7 +560,7 @@ defmodule SuffixTree do
   #   tree
   # end
 
-  @spec hash(String.t()) :: integer()
+  @spec hash(String.t()) :: hash()
   def hash(string) do
     Murmur.hash_x86_128(string)
   end

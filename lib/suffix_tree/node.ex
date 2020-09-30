@@ -4,8 +4,8 @@ defmodule SuffixTree.Node do
   alias __MODULE__
   use Puid
 
-  @type hash :: integer()
-  @type index :: integer()
+  @type hash :: non_neg_integer()
+  @type index :: non_neg_integer()
   @type nid :: String.t()
 
   @type n :: %Node{
